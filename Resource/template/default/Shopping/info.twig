@@ -1,0 +1,36 @@
+<div class="hidden">
+    <div id="elepay_info">
+        {% for item in payment_methods %}
+            <div class="elepay-payment-method-icon" style="background-image: url({{ item.image }})"></div>
+        {% endfor %}
+    </div>
+</div>
+
+{% block javascript %}
+<script>
+$(function () {
+    var $radio = $('input#shopping_order_Payment_{{ payment_id }}');
+    var $label = $radio.siblings('label');
+    $label.after($('#elepay_info'));
+});
+</script>
+{% endblock javascript %}
+
+{% block stylesheet %}
+<style>
+#elepay_info {
+    padding: 15px;
+}
+
+.elepay-payment-method-icon {
+    display: inline-block;
+    margin-right: 8px;
+    margin-bottom: 8px;
+    width: 24px;
+    height: 20px;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+}
+</style>
+{% endblock %}

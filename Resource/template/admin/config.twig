@@ -1,0 +1,333 @@
+{% extends '@admin/default_frame.twig' %}
+
+{% set menus = ['store', 'plugin', 'plugin_list'] %}
+
+{% block title %}{{ 'elepay.admin.config.title'|trans }}{% endblock %}
+{% block sub_title %}{{ 'elepay.admin.config.sub_title'|trans }}{% endblock %}
+
+{% form_theme form '@admin/Form/bootstrap_4_horizontal_layout.html.twig' %}
+
+{% block main %}
+<form role="form" method="post">
+    {{ form_widget(form._token) }}
+    <div class="c-contentsArea__cols">
+        <div class="c-contentsArea__primaryCol">
+            <div class="c-primaryCol">
+
+                <div class="card rounded border-0 mb-4">
+                    <div class="card-header">
+                        <span>{{ 'elepay.admin.config.setting'|trans }}</span>
+                    </div>
+
+                    {% for item in form %}
+                        {% set key = item.vars.name %}
+                        {% if not (key == '_token') %}
+                            <div class="card-body">
+                                <div class="row">
+                                    <label class="col-3">
+                                        {{ "elepay.admin.config.from.#{key}"|trans }}
+                                        {% if item.vars.required %}
+                                            <span class="badge badge-primary ml-1">{{ 'elepay.admin.config.required'|trans }}</span>
+                                        {% endif %}
+                                    </label>
+                                    <div class="col mb-2">
+                                        {{ form_widget(item) }}
+                                        {{ form_errors(item) }}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <div class="card rounded border-0 mb-4">
+                    <div class="card-header">
+                        <span>{{ 'elepay.admin.config.webhook'|trans }}</span>
+                        <span style="margin-left: 10px; font-size: 12px; color: #666;">{{ 'elepay.admin.config.webhook_tips'|trans }}</span>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <label class="col-3">
+                                {{ 'elepay.admin.config.paid_webhook_url'|trans }}
+                            </label>
+                            <div class="col">
+                                <div class="input-group">
+                                    <input id="paid_webhook_url" type="text" class="form-control" value="{{ url('elepay_paid_webhook') }}" readonly>
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-secondary ec-elepay-copy-btn" type="button" data-clipboard-target="#paid_webhook_url">{{ 'elepay.admin.config.copy'|trans }}</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="c-conversionArea">
+        <div class="c-conversionArea__container">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-6">
+                    <div class="c-conversionArea__leftBlockItem">
+                        <a class="c-baseLink"
+                           href="{{ url('admin_store_plugin') }}">
+                            <i class="fa fa-backward" aria-hidden="true"></i>
+                            <span>{{ 'elepay.admin.config.back'|trans }}</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="row align-items-center justify-content-end">
+                        <div class="col-auto">
+                            <button class="btn btn-ec-conversion px-5"
+                                    type="submit">{{ 'elepay.admin.config.save'|trans }}</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block javascript %}
+<script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script>
+<script>
+var clipboard=new ClipboardJS('.ec-elepay-copy-btn');
+clipboard.on('success',function(e){
+    e.clearSelection();
+    // console.info('Action:',e.action);
+    // console.info('Text:',e.text);
+    // console.info('Trigger:',e.trigger);
+    showTooltip(e.trigger,'Copied!');
+});
+clipboard.on('error',function(e){
+    // console.error('Action:',e.action);
+    // console.error('Trigger:',e.trigger);
+    showTooltip(e.trigger,fallbackMessage(e.action));
+});
+var btns = document.querySelectorAll('.ec-elepay-copy-btn');
+for (var i=0; i<btns.length; i++) {
+    btns[i].addEventListener('mouseleave',clearTooltip);
+    btns[i].addEventListener('blur',clearTooltip);
+}
+function clearTooltip(e){
+    e.currentTarget.classList.remove('ec-elepay-tooltipped');
+    e.currentTarget.classList.remove('ec-elepay-tooltipped-n');
+    e.currentTarget.removeAttribute('aria-label');
+}
+function showTooltip(elem,msg){
+    elem.classList.add('ec-elepay-tooltipped');
+    elem.classList.add('ec-elepay-tooltipped-n');
+    elem.setAttribute('aria-label',msg);
+}
+function fallbackMessage(action){
+    var actionMsg='';
+    var actionKey=(action==='cut'?'X':'C');
+    if(/iPhone|iPad/i.test(navigator.userAgent)){
+        actionMsg='No support :(';
+    } else if(/Mac/i.test(navigator.userAgent)){
+        actionMsg='Press ⌘-'+actionKey+' to '+action;
+    } else{
+        actionMsg='Press Ctrl-'+actionKey+' to '+action;
+    }
+    return actionMsg;
+}
+</script>
+{% endblock %}
+
+{% block stylesheet %}
+<style>
+.ec-elepay-tooltipped {
+    position: relative
+}
+
+.ec-elepay-tooltipped:after {
+    position: absolute;
+    z-index: 1000000;
+    display: none;
+    padding: 5px 8px;
+    font: normal normal 11px/1.5 Helvetica,arial,nimbussansl,liberationsans,freesans,clean,sans-serif,"Segoe UI Emoji","Segoe UI Symbol";
+    color: #fff;
+    text-align: center;
+    text-decoration: none;
+    text-shadow: none;
+    text-transform: none;
+    letter-spacing: normal;
+    word-wrap: break-word;
+    white-space: pre;
+    pointer-events: none;
+    content: attr(aria-label);
+    background: rgba(0,0,0,.8);
+    border-radius: 3px;
+    -webkit-font-smoothing: subpixel-antialiased
+}
+
+.ec-elepay-tooltipped:before {
+    position: absolute;
+    z-index: 1000001;
+    display: none;
+    width: 0;
+    height: 0;
+    color: rgba(0,0,0,.8);
+    pointer-events: none;
+    content: "";
+    border: 5px solid transparent
+}
+
+.ec-elepay-tooltipped:hover:before,
+.ec-elepay-tooltipped:hover:after,
+.ec-elepay-tooltipped:active:before,
+.ec-elepay-tooltipped:active:after,
+.ec-elepay-tooltipped:focus:before,
+.ec-elepay-tooltipped:focus:after {
+    display: inline-block;
+    text-decoration: none
+}
+
+.ec-elepay-tooltipped-multiline:hover:after,
+.ec-elepay-tooltipped-multiline:active:after,
+.ec-elepay-tooltipped-multiline:focus:after {
+    display: table-cell
+}
+
+.ec-elepay-tooltipped-s:after,
+.ec-elepay-tooltipped-se:after,
+.ec-elepay-tooltipped-sw:after {
+    top: 100%;
+    right: 50%;
+    margin-top: 5px
+}
+
+.ec-elepay-tooltipped-s:before,
+.ec-elepay-tooltipped-se:before,
+.ec-elepay-tooltipped-sw:before {
+    top: auto;
+    right: 50%;
+    bottom: -5px;
+    margin-right: -5px;
+    border-bottom-color: rgba(0,0,0,.8)
+}
+
+.ec-elepay-tooltipped-se:after {
+    right: auto;
+    left: 50%;
+    margin-left: -15px
+}
+
+.ec-elepay-tooltipped-sw:after {
+    margin-right: -15px
+}
+
+.ec-elepay-tooltipped-n:after,
+.ec-elepay-tooltipped-ne:after,
+.ec-elepay-tooltipped-nw:after {
+    right: 50%;
+    bottom: 100%;
+    margin-bottom: 5px
+}
+
+.ec-elepay-tooltipped-n:before,
+.ec-elepay-tooltipped-ne:before,
+.ec-elepay-tooltipped-nw:before {
+    top: -5px;
+    right: 50%;
+    bottom: auto;
+    margin-right: -5px;
+    border-top-color: rgba(0,0,0,.8)
+}
+
+.ec-elepay-tooltipped-ne:after {
+    right: auto;
+    left: 50%;
+    margin-left: -15px
+}
+
+.ec-elepay-tooltipped-nw:after {
+    margin-right: -15px
+}
+
+.ec-elepay-tooltipped-s:after,
+.ec-elepay-tooltipped-n:after {
+    -webkit-transform: translateX(50%);
+    -ms-transform: translateX(50%);
+    transform: translateX(50%)
+}
+
+.ec-elepay-tooltipped-w:after {
+    right: 100%;
+    bottom: 50%;
+    margin-right: 5px;
+    -webkit-transform: translateY(50%);
+    -ms-transform: translateY(50%);
+    transform: translateY(50%)
+}
+
+.ec-elepay-tooltipped-w:before {
+    top: 50%;
+    bottom: 50%;
+    left: -5px;
+    margin-top: -5px;
+    border-left-color: rgba(0,0,0,.8)
+}
+
+.ec-elepay-tooltipped-e:after {
+    bottom: 50%;
+    left: 100%;
+    margin-left: 5px;
+    -webkit-transform: translateY(50%);
+    -ms-transform: translateY(50%);
+    transform: translateY(50%)
+}
+
+.ec-elepay-tooltipped-e:before {
+    top: 50%;
+    right: -5px;
+    bottom: 50%;
+    margin-top: -5px;
+    border-right-color: rgba(0,0,0,.8)
+}
+
+.ec-elepay-tooltipped-multiline:after {
+    width: -webkit-max-content;
+    width: -moz-max-content;
+    width: max-content;
+    max-width: 250px;
+    word-break: break-word;
+    word-wrap: normal;
+    white-space: pre-line;
+    border-collapse: separate
+}
+
+.ec-elepay-tooltipped-multiline.ec-elepay-tooltipped-s:after,
+.ec-elepay-tooltipped-multiline.ec-elepay-tooltipped-n:after {
+    right: auto;
+    left: 50%;
+    -webkit-transform: translateX(-50%);
+    -ms-transform: translateX(-50%);
+    transform: translateX(-50%)
+}
+
+.ec-elepay-tooltipped-multiline.ec-elepay-tooltipped-w:after,
+.ec-elepay-tooltipped-multiline.ec-elepay-tooltipped-e:after {
+    right: 100%
+}
+
+@media screen and (min-width: 0\0) {
+    .ec-elepay-tooltipped-multiline:after {
+        width:250px
+    }
+}
+
+.ec-elepay-tooltipped-sticky:before,
+.ec-elepay-tooltipped-sticky:after {
+    display: inline-block
+}
+
+.ec-elepay-tooltipped-sticky.ec-elepay-tooltipped-multiline:after {
+    display: table-cell
+}
+</style>
+{% endblock stylesheet %}

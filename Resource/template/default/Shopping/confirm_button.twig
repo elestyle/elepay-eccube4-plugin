@@ -1,0 +1,8 @@
+{% if Order.Payment.getMethodClass == 'Plugin\\Elepay\\Service\\Method\\Elepay' %}
+<script>
+$(function () {
+    // 既存決済完了ボタンの文言変更
+    $('button.ec-blockBtn--action').text('{{ 'elepay.front.confirm.payment_btn'|trans|replace({ '%payment_method%': payment_method }) }}');
+});
+</script>
+{% endif %}

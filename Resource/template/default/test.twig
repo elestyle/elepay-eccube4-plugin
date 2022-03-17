@@ -1,0 +1,21 @@
+{% extends 'default_frame.twig' %}
+
+{% block javascript %}
+<script type="text/javascript">
+$(function() {
+    alert('test')
+});
+</script>
+{% endblock javascript %}
+
+{% set body_class = 'cart_page' %}
+
+{% block main %}
+    <div class="ec-role">
+        <div class="ec-pageHeader">
+            <h1>{{ message }}</h1>
+        </div>
+
+        <div>{{ request }}</div>
+    </div>
+{% endblock %}

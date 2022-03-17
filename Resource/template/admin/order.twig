@@ -1,0 +1,38 @@
+<script>
+$(function () {
+    var elepayIdMap = JSON.parse('{{ elepay_id_map|json_encode|e('js') }}');
+    var $table = $('#search_result');
+    var $th = $table.find('thead th:last').prev();
+    $th.after($th.clone().html('{{ 'elepay.admin.order.table_col_elepay'|trans }}'));
+
+    var $trs = $table.find('tbody tr');
+    $trs.each(function (i, elem) {
+        var $tr = $(elem);
+        var $links = $tr.find('a.action-edit');
+        if (!$links.length) return;
+
+        var id;
+        $links.each(function (i, link) {
+            if (!link.href) return
+            var result = /\/order\/(\d+)\/edit/.exec(link.href)
+            if (result) {
+                id = result[1];
+                return false;
+            }
+        });
+
+        if (!id) return;
+        var elepayChargeId = elepayIdMap[id];
+        var elepayLink = '';
+
+        if (elepayChargeId) {
+            elepayLink = '<a href="/elepay_admin_redirect?chargeId=' +
+                elepayChargeId +
+                '" target="_blank">{{ 'elepay.admin.order.go_to_elepay_admin'|trans }}</a>';
+        }
+
+        var $td = $tr.find('td:last').prev();
+        $td.after($td.clone().html(elepayLink));
+    })
+});
+</script>

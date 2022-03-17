@@ -1,0 +1,27 @@
+# flash messages
+elepay.admin.save.success: 登録しました。
+
+# admin twig
+elepay.admin.config.title: elepay
+elepay.admin.config.sub_title: プラグイン一覧
+elepay.admin.config.setting: 設定
+elepay.admin.config.save: 登録
+elepay.admin.config.required: 必須
+elepay.admin.config.back: プラグイン一覧
+elepay.admin.config.copy: コピー
+elepay.admin.config.from.public_key: パブリックキー
+elepay.admin.config.from.secret_key: シークレットキー
+elepay.admin.config.from.validation.public_key: ※ パブリックキーが入力されていません。
+elepay.admin.config.from.validation.secret_key: ※ シークレットキーが入力されていません。
+elepay.admin.config.webhook: Webhook設定
+elepay.admin.config.webhook_tips: 下記のURLをelepayの開発設定->Webhookに追加してください
+elepay.admin.config.paid_webhook_url: URL
+elepay.admin.order.table_col_elepay: elepay 注文
+elepay.admin.order.go_to_elepay_admin: elepay 管理画面へ
+
+# front twig
+elepay.front.confirm.payment_btn: %payment_method%でお支払い
+elepay.front.checkout.paying: 支払い処理中...
+elepay.front.checkout.repay: もう一度支払う
+elepay.front.checkout.back: 戻る
+elepay.front.info.payment_method_not_support: このデバイスはサポートしていません
