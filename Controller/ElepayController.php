@@ -348,14 +348,17 @@ class ElepayController extends AbstractController
             }
         }
 
+        // purchaseFlow::commitを呼び出し, 購入処理を完了させる.
+        // The purpose of this operation is to increase the order_date of the order,
+        // but it also changes the order status to new,
+        // so it must be executed before the order status changes
+        $this->purchaseFlow->commit($order, new PurchaseContext());
+
         // Change the order status to paid
         $order->setOrderStatus($orderStatusPaid);
         $order->setPaymentDate(new DateTime());
         $order->setPaymentMethod($paymentMethodName);
         $order->setElepayChargeId($chargeObject['id']); // If paying using a widget, need to save the chargeId here
-
-        // purchaseFlow::commitを呼び出し, 購入処理を完了させる.
-        $this->purchaseFlow->commit($order, new PurchaseContext());
         $this->entityManager->flush();
 
         // メール送信
