@@ -1,5 +1,7 @@
 # README
 
+Please see the instructions for user installation [here](https://elestyle.atlassian.net/wiki/external/494370908/YWE3YzgxYmJjYWNmNDA4N2ExYTY5ZGE0Z[…]iYTdmY2QxMDE4ZWYxNDM5Zjg1NWMwOWU1NWVlNWM3NmIiLCJwIjoiYyJ9).
+
 ### Install dependencies
 
 Put `elepay-php-sdk` in the `Resource/vendor/` directory
