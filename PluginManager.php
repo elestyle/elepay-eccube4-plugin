@@ -100,11 +100,8 @@ class PluginManager extends AbstractPluginManager
         /** @var EntityManager $entityManager */
         $entityManager = $container->get('doctrine')->getManager();
 
-        /** @var ConfigRepository $configRepository */
-        $configRepository = $container->get(ConfigRepository::class);
-
         /** @var Config $config */
-        $config = $configRepository->get();
+        $config = $entityManager->find(Config::class, 1);
 
         if (empty($config)) {
             /** @var Config $Config */
@@ -127,7 +124,7 @@ class PluginManager extends AbstractPluginManager
         /** @var EntityManager $entityManager */
         $entityManager = $container->get('doctrine')->getManager();
         /** @var PaymentRepository $paymentRepository */
-        $paymentRepository = $container->get(PaymentRepository::class);
+        $paymentRepository = $entityManager->getRepository(Payment::class);
 
         // Check that the payment method is registered in the dtb_payment table in the database
         /** @var Payment $payment */
@@ -164,11 +161,11 @@ class PluginManager extends AbstractPluginManager
 
         // Bind existing delivery methods to payment methods
         /** @var DeliveryRepository $deliveryRepository */
-        $deliveryRepository = $container->get(DeliveryRepository::class);
+        $deliveryRepository = $entityManager->getRepository(Delivery::class);
         /** @var Delivery $delivery */
         foreach ($deliveryRepository->findAll() as $delivery) {
             /** @var PaymentOptionRepository $paymentOptionRepository */
-            $paymentOptionRepository = $container->get(PaymentOptionRepository::class);
+            $paymentOptionRepository = $entityManager->getRepository(PaymentOption::class);
             $paymentOption = $paymentOptionRepository->findOneBy([
                 'delivery_id' => $delivery->getId(),
                 'payment_id' => $payment->getId(),
@@ -201,7 +198,7 @@ class PluginManager extends AbstractPluginManager
         /** @var EntityManager $entityManager */
         $entityManager = $container->get('doctrine')->getManager();
         /** @var PaymentRepository $paymentRepository */
-        $paymentRepository = $container->get(PaymentRepository::class);
+        $paymentRepository = $entityManager->getRepository(Payment::class);
 
         /** @var Payment $payment */
         $payment = $paymentRepository->findOneBy(['method_class' => Elepay::class]);
@@ -222,7 +219,7 @@ class PluginManager extends AbstractPluginManager
         /** @var EntityManager $entityManager */
         $entityManager = $container->get('doctrine')->getManager();
         /** @var PaymentRepository $paymentRepository */
-        $paymentRepository = $container->get(PaymentRepository::class);
+        $paymentRepository = $entityManager->getRepository(Payment::class);
 
         /** @var Payment $payment */
         $payment = $paymentRepository->findOneBy(['method_class' => Elepay::class]);
@@ -243,7 +240,7 @@ class PluginManager extends AbstractPluginManager
         /** @var EntityManager $entityManager */
         $entityManager = $container->get('doctrine')->getManager();
         /** @var PaymentRepository $paymentRepository */
-        $paymentRepository = $container->get(PaymentRepository::class);
+        $paymentRepository = $entityManager->getRepository(Payment::class);
 
         /** @var Payment $payment */
         $payment = $paymentRepository->findOneBy(['method_class' => Elepay::class]);

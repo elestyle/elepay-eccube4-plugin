@@ -18,7 +18,6 @@ monolog:
       passthru_level: info
       handler: elepay_rotating_file
       channels: ['elepay']
-      channels: ['!event', '!doctrine']
     elepay_rotating_file:
       type: rotating_file
       max_files: 60

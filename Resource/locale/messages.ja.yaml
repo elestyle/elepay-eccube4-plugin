@@ -20,7 +20,7 @@ elepay.admin.order.table_col_elepay: elepay 注文
 elepay.admin.order.go_to_elepay_admin: elepay 管理画面へ
 
 # front twig
-elepay.front.confirm.payment_btn: %payment_method%でお支払い
+elepay.front.confirm.payment_btn: '%payment_method%でお支払い'
 elepay.front.checkout.paying: 支払い処理中...
 elepay.front.checkout.repay: もう一度支払う
 elepay.front.checkout.back: 戻る
