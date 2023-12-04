@@ -275,24 +275,6 @@ class ElepayController extends AbstractController
         return $this->redirect($redirectUrl);
     }
 
-    /**
-     * test
-     *
-     * @Route("/elepay_test", name="elepay_test")
-     * @Template("@Elepay/default/test.twig")
-     *
-     * @param Request $request
-     *
-     * @return array
-     */
-    public function test(Request $request): array
-    {
-        return [
-            'message' => 'elepay test',
-            'request' => $request
-        ];
-    }
-
     private function orderComplete (Order $order, string $cartKey = null)
     {
         // Clear shopping cart
