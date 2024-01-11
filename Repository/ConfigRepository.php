@@ -3,12 +3,12 @@
 namespace Plugin\Elepay\Repository;
 
 use Eccube\Repository\AbstractRepository;
-use Symfony\Bridge\Doctrine\RegistryInterface;
+use Doctrine\Persistence\ManagerRegistry;
 use Plugin\Elepay\Entity\Config;
 
 class ConfigRepository extends AbstractRepository
 {
-    public function __construct(RegistryInterface $registry)
+    public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Config::class);
     }

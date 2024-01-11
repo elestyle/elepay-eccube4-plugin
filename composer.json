@@ -1,10 +1,10 @@
 {
   "name": "ec-cube/elepay",
-  "version": "1.1.0",
-  "description": "elepay決済プラグイン(4.1系)",
+  "version": "1.2.0",
+  "description": "elepay決済プラグイン(4.2系)",
   "type": "eccube-plugin",
   "require": {
-    "ec-cube/plugin-installer": "~0.0.7"
+    "ec-cube/plugin-installer": "~0.0.7 || ^2.0"
   },
   "autoload": {
     "psr-4": {

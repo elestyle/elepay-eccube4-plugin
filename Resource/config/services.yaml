@@ -2,11 +2,11 @@ parameters:
   elepay.name: QRコード決済
   elepay.payment_methods_info_url: https://resource.elecdn.com/payment-methods/info.json
   elepay.admin_host: https://dashboard.elepay.io
-  # elepay.admin_host: https://stg-dashboard.elepay.io
   elepay.api_host: https://api.elepay.io
-  # elepay.api_host: https://stg-api.elepay.io
   elepay.sdk_host: https://sdk.elepay.io
-  # elepay.sdk_host: https://stg-sdk.elepay.io
+#  elepay.admin_host: https://stg-dashboard.elepay.io
+#  elepay.api_host: https://stg-api.elepay.io
+#  elepay.sdk_host: https://stg-sdk.elepay.io
   elepay.js_sdk: https://js.elepay.io/v1/elepay.js
 
 monolog:
