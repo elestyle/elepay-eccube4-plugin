@@ -248,11 +248,11 @@ class ElepayHelper
      *
      * @param Order $order
      * @param string $frontUrl
-     * @param array|null $extra
+     * @param array|null $metadata
      * @return array
      * @throws ApiException
      */
-    public function createCodeObject($order, $frontUrl, $extra = null)
+    public function createCodeObject($order, $frontUrl, $metadata = null)
     {
         /** @var CodeReq $codeReq */
         $codeReq = new CodeReq();
@@ -260,7 +260,7 @@ class ElepayHelper
         $codeReq->setAmount($order->getPaymentTotal());
         $codeReq->setCurrency($order->getCurrencyCode());
         $codeReq->setFrontUrl($frontUrl);
-        $codeReq->setExtra($extra);
+        $codeReq->setMetadata($metadata);
 
         /** @var CodeDto $codeDto */
         $codeDto = $this->codeApi->createCode($codeReq);
