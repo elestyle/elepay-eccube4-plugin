@@ -103,12 +103,13 @@ class ElepayController extends AbstractController
                 'orderNo' => $this->elepayHelper->getOrderNo($order)
             ]
         );
-        $codeExtra = [
+        $codeMetadata = [
+            'client' => 'eccube',
             'cartKey' => $this->elepayHelper->getCartKey()
         ];
 
         try {
-            $paymentObject = $this->elepayHelper->createCodeObject($order, $checkoutValidateUrl, $codeExtra);
+            $paymentObject = $this->elepayHelper->createCodeObject($order, $checkoutValidateUrl, $codeMetadata);
             $redirectUrl = $this->elepayHelper->addQuery(
                 $paymentObject['codeUrl'],
                 [
@@ -223,7 +224,7 @@ class ElepayController extends AbstractController
 
         $json = $request->getContent();
         $data = json_decode($json, true);
-        $cartKey = $data['data']['object']['extra']['cartKey'];
+        $cartKey = $data['data']['object']['metadata']['cartKey'];
         $orderNo = $this->elepayHelper->parseOrderNo($data['data']['object']['orderNo']);
         $chargeId = $data['data']['object']['id'];
         $chargeObject = $this->elepayHelper->getChargeObject($chargeId);
