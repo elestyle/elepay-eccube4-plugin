@@ -3,9 +3,9 @@
 namespace Plugin\Elepay\Controller\Admin;
 
 use Symfony\Component\HttpFoundation\RedirectResponse;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
 use Eccube\Common\EccubeConfig;
 use Eccube\Controller\AbstractController;
 use Plugin\Elepay\Form\Type\Admin\ConfigType;
@@ -39,9 +39,8 @@ class ConfigController extends AbstractController
 
     /**
      * @Route("/%eccube_admin_route%/elepay/config", name="elepay_admin_config")
-     * @Template("@Elepay/admin/config.twig")
      * @param Request $request
-     * @return array|RedirectResponse
+     * @return Response
      */
     public function index(Request $request)
     {
@@ -64,8 +63,8 @@ class ConfigController extends AbstractController
             }
         }
 
-        return [
+        return $this->render('@Elepay/admin/config.twig', [
             'form' => $form->createView()
-        ];
+        ]);
     }
 }

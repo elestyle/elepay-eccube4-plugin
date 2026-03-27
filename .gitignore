@@ -1,5 +1,6 @@
 .DS_Store
 /Resource/vendor
+/docs
 
 # Editor directories and files
 .idea

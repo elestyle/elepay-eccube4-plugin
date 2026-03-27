@@ -7,7 +7,7 @@ use Doctrine\ORM\OptimisticLockException;
 use Doctrine\ORM\ORMException;
 use Eccube\Common\EccubeConfig;
 use Symfony\Component\Filesystem\Filesystem;
-use Symfony\Component\DependencyInjection\ContainerInterface;
+use Psr\Container\ContainerInterface;
 use Eccube\Plugin\AbstractPluginManager;
 use Eccube\Entity\Payment;
 use Eccube\Entity\PaymentOption;
@@ -107,7 +107,7 @@ class PluginManager extends AbstractPluginManager
             /** @var Config $Config */
             $config = Config::createInitialConfig();
             $entityManager->persist($config);
-            $entityManager->flush($config);
+            $entityManager->flush();
         }
     }
 
@@ -151,13 +151,13 @@ class PluginManager extends AbstractPluginManager
                 ->setCharge(0);
         }
 
-        $eccubeConfig = new EccubeConfig($container);
+        $eccubeConfig = $container->get(EccubeConfig::class);
         $payment
             ->setMethod($eccubeConfig->get('elepay.name'))
             ->setVisible(false);
 
         $entityManager->persist($payment);
-        $entityManager->flush($payment);
+        $entityManager->flush();
 
         // Bind existing delivery methods to payment methods
         /** @var DeliveryRepository $deliveryRepository */
@@ -180,7 +180,7 @@ class PluginManager extends AbstractPluginManager
                 ->setDelivery($delivery)
                 ->setDeliveryId($delivery->getId());
             $entityManager->persist($paymentOption);
-            $entityManager->flush($paymentOption);
+            $entityManager->flush();
         }
     }
 
@@ -204,7 +204,7 @@ class PluginManager extends AbstractPluginManager
         $payment = $paymentRepository->findOneBy(['method_class' => Elepay::class]);
         $payment->setVisible(false);
         $entityManager->persist($payment);
-        $entityManager->flush($payment);
+        $entityManager->flush();
     }
 
     /**
@@ -225,7 +225,7 @@ class PluginManager extends AbstractPluginManager
         $payment = $paymentRepository->findOneBy(['method_class' => Elepay::class]);
         $payment->setVisible(true);
         $entityManager->persist($payment);
-        $entityManager->flush($payment);
+        $entityManager->flush();
     }
 
     /**
@@ -246,7 +246,7 @@ class PluginManager extends AbstractPluginManager
         $payment = $paymentRepository->findOneBy(['method_class' => Elepay::class]);
         $payment->setVisible(false);
         $entityManager->persist($payment);
-        $entityManager->flush($payment);
+        $entityManager->flush();
     }
 
     /**

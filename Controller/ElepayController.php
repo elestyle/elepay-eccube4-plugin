@@ -13,10 +13,10 @@ use Eccube\Service\PurchaseFlow\PurchaseFlow;
 use Elepay\ApiException;
 use Exception;
 use Eccube\Service\OrderHelper;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
+use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
 use Eccube\Controller\AbstractController;
 use Eccube\Entity\Order;
@@ -47,16 +47,23 @@ class ElepayController extends AbstractController
      */
     protected $purchaseFlow;
 
+    /**
+     * @var RequestStack
+     */
+    protected $requestStack;
+
     public function __construct(
         EccubeConfig $eccubeConfig,
         ElepayHelper $elepayHelper,
         LoggerService $loggerService,
-        PurchaseFlow $shoppingPurchaseFlow
+        PurchaseFlow $shoppingPurchaseFlow,
+        RequestStack $requestStack
     ) {
         $this->eccubeConfig = $eccubeConfig;
         $this->elepayHelper = $elepayHelper;
         $this->logger = $loggerService;
         $this->purchaseFlow = $shoppingPurchaseFlow;
+        $this->requestStack = $requestStack;
     }
 
     /**
@@ -91,7 +98,7 @@ class ElepayController extends AbstractController
             $this->elepayHelper->cartClear();
 
             // Save the order ID into Session. The shopping_complete page needs Session to get the order
-            $this->session->set(OrderHelper::SESSION_ORDER_ID, $order->getOrderNo());
+            $this->requestStack->getSession()->set(OrderHelper::SESSION_ORDER_ID, $order->getOrderNo());
 
             return $this->redirectToRoute('shopping_complete');
         }
@@ -248,7 +255,7 @@ class ElepayController extends AbstractController
                 ],
                 $request
             );
-            $this->eventDispatcher->dispatch(EccubeEvents::FRONT_SHOPPING_COMPLETE_INITIALIZE, $event);
+            $this->eventDispatcher->dispatch($event, EccubeEvents::FRONT_SHOPPING_COMPLETE_INITIALIZE);
             $this->orderComplete($order, $cartKey);
             $this->logger->info('[注文完了] 注文完了.');
         }
@@ -283,7 +290,7 @@ class ElepayController extends AbstractController
         $this->elepayHelper->cartClear($cartKey);
 
         // Save the order ID into Session. The shopping_complete screen needs Session to get the order
-        $this->session->set(OrderHelper::SESSION_ORDER_ID, $order->getOrderNo());
+        $this->requestStack->getSession()->set(OrderHelper::SESSION_ORDER_ID, $order->getOrderNo());
     }
 
     private function orderValidate(Order $order, array $chargeObject)
