@@ -22,6 +22,7 @@ use Eccube\Controller\AbstractController;
 use Eccube\Entity\Order;
 use Eccube\Entity\Master\OrderStatus;
 use InvalidArgumentException;
+use Eccube\Common\Constant;
 use Plugin\Elepay\Service\ElepayHelper;
 use Plugin\Elepay\Service\LoggerService;
 
@@ -52,6 +53,11 @@ class ElepayController extends AbstractController
      */
     protected $requestStack;
 
+    /**
+     * @var string
+     */
+    private $pluginVersion;
+
     public function __construct(
         EccubeConfig $eccubeConfig,
         ElepayHelper $elepayHelper,
@@ -64,6 +70,7 @@ class ElepayController extends AbstractController
         $this->logger = $loggerService;
         $this->purchaseFlow = $shoppingPurchaseFlow;
         $this->requestStack = $requestStack;
+        $this->pluginVersion = json_decode(file_get_contents(__DIR__ . '/../composer.json'), true)['version'] ?? '';
     }
 
     /**
@@ -112,6 +119,8 @@ class ElepayController extends AbstractController
         );
         $codeMetadata = [
             'client' => 'eccube',
+            'clientVersion' => Constant::VERSION,
+            'pluginVersion' => $this->pluginVersion,
             'cartKey' => $this->elepayHelper->getCartKey()
         ];
 
