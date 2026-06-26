@@ -1,6 +1,6 @@
 <?php
 
-namespace Plugin\Elepay\Entity;
+namespace Plugin\elepay42\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 use Eccube\Entity\AbstractEntity;
@@ -11,7 +11,7 @@ use stdClass;
  * 插件安装时，会根据此文件自动创建数据库表
  *
  * @ORM\Table(name="plg_elepay_config")
- * @ORM\Entity(repositoryClass="Plugin\Elepay\Repository\ConfigRepository")
+ * @ORM\Entity(repositoryClass="Plugin\elepay42\Repository\ConfigRepository")
  */
 class Config extends AbstractEntity
 {

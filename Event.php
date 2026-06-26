@@ -1,6 +1,6 @@
 <?php
 
-namespace Plugin\Elepay;
+namespace Plugin\elepay42;
 
 use Eccube\Common\EccubeConfig;
 use Eccube\Entity\Order;
@@ -12,12 +12,12 @@ use Eccube\Repository\PaymentRepository;
 use Elepay\ApiException;
 use Knp\Component\Pager\Pagination\SlidingPagination;
 use Knp\Component\Pager\PaginatorInterface;
-use Plugin\Elepay\Entity\Config;
-use Plugin\Elepay\Service\ElepayHelper;
+use Plugin\elepay42\Entity\Config;
+use Plugin\elepay42\Service\ElepayHelper;
 use SunCat\MobileDetectBundle\DeviceDetector\MobileDetector;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Plugin\Elepay\Repository\ConfigRepository;
-use Plugin\Elepay\Service\Method\Elepay;
+use Plugin\elepay42\Repository\ConfigRepository;
+use Plugin\elepay42\Service\Method\Elepay;
 
 class Event implements EventSubscriberInterface
 {
@@ -110,7 +110,7 @@ class Event implements EventSubscriberInterface
         ];
 
         $event->setParameters(array_merge($event->getParameters(), $parameters));
-        $event->addSnippet('@Elepay/default/Shopping/info.twig');
+        $event->addSnippet('@elepay42/default/Shopping/info.twig');
     }
 
     /**
@@ -129,7 +129,7 @@ class Event implements EventSubscriberInterface
             ];
             $event->setParameters(array_merge($event->getParameters(), $parameters));
         }
-        $event->addSnippet('@Elepay/default/Shopping/confirm_button.twig');
+        $event->addSnippet('@elepay42/default/Shopping/confirm_button.twig');
     }
 
     /**
@@ -145,7 +145,7 @@ class Event implements EventSubscriberInterface
             'elepay_id_map' => $this->elepayIdMap
         ];
         $event->setParameters(array_merge($event->getParameters(), $parameters));
-        $event->addSnippet('@Elepay/admin/order.twig');
+        $event->addSnippet('@elepay42/admin/order.twig');
         $this->elepayIdMap = null;
     }
 

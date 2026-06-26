@@ -1,6 +1,6 @@
 <?php
 
-namespace Plugin\Elepay\Service;
+namespace Plugin\elepay42\Service;
 
 /**
  * Class LoggerService

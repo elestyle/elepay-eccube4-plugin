@@ -1,6 +1,6 @@
 <?php
 
-namespace Plugin\Elepay\Entity;
+namespace Plugin\elepay42\Entity;
 
 use Eccube\Annotation\EntityExtension;
 use Doctrine\ORM\Mapping as ORM;

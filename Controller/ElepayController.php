@@ -1,6 +1,6 @@
 <?php
 
-namespace Plugin\Elepay\Controller;
+namespace Plugin\elepay42\Controller;
 
 require_once(__DIR__ . '/../Resource/vendor/autoload.php');
 
@@ -23,8 +23,8 @@ use Eccube\Entity\Order;
 use Eccube\Entity\Master\OrderStatus;
 use InvalidArgumentException;
 use Eccube\Common\Constant;
-use Plugin\Elepay\Service\ElepayHelper;
-use Plugin\Elepay\Service\LoggerService;
+use Plugin\elepay42\Service\ElepayHelper;
+use Plugin\elepay42\Service\LoggerService;
 
 class ElepayController extends AbstractController
 {

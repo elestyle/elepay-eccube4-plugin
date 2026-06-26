@@ -1,6 +1,6 @@
 <?php
 
-namespace Plugin\Elepay;
+namespace Plugin\elepay42;
 
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\OptimisticLockException;
@@ -15,9 +15,9 @@ use Eccube\Entity\Delivery;
 use Eccube\Repository\PaymentRepository;
 use Eccube\Repository\PaymentOptionRepository;
 use Eccube\Repository\DeliveryRepository;
-use Plugin\Elepay\Repository\ConfigRepository;
-use Plugin\Elepay\Entity\Config;
-use Plugin\Elepay\Service\Method\Elepay;
+use Plugin\elepay42\Repository\ConfigRepository;
+use Plugin\elepay42\Entity\Config;
+use Plugin\elepay42\Service\Method\Elepay;
 
 class PluginManager extends AbstractPluginManager
 {

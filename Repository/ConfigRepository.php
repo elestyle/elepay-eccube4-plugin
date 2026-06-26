@@ -1,10 +1,10 @@
 <?php
 
-namespace Plugin\Elepay\Repository;
+namespace Plugin\elepay42\Repository;
 
 use Eccube\Repository\AbstractRepository;
 use Doctrine\Persistence\ManagerRegistry;
-use Plugin\Elepay\Entity\Config;
+use Plugin\elepay42\Entity\Config;
 
 class ConfigRepository extends AbstractRepository
 {

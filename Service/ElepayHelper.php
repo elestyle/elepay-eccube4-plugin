@@ -1,6 +1,6 @@
 <?php
 
-namespace Plugin\Elepay\Service;
+namespace Plugin\elepay42\Service;
 
 require_once(__DIR__ . '/../Resource/vendor/autoload.php');
 
@@ -28,8 +28,8 @@ use Elepay\Model\CodeDto;
 use Elepay\Model\CodeReq;
 use Elepay\Model\ChargeDto;
 use Elepay\Model\CodePaymentMethodResponse;
-use Plugin\Elepay\Entity\Config;
-use Plugin\Elepay\Repository\ConfigRepository;
+use Plugin\elepay42\Entity\Config;
+use Plugin\elepay42\Repository\ConfigRepository;
 
 class ElepayHelper
 {

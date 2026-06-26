@@ -1,6 +1,6 @@
 <?php
 
-namespace Plugin\Elepay\Util;
+namespace Plugin\elepay42\Util;
 
 /**
  * 決済モジュール用 汎用関数クラス

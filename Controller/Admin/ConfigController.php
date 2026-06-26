@@ -1,6 +1,6 @@
 <?php
 
-namespace Plugin\Elepay\Controller\Admin;
+namespace Plugin\elepay42\Controller\Admin;
 
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -8,8 +8,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Eccube\Common\EccubeConfig;
 use Eccube\Controller\AbstractController;
-use Plugin\Elepay\Form\Type\Admin\ConfigType;
-use Plugin\Elepay\Repository\ConfigRepository;
+use Plugin\elepay42\Form\Type\Admin\ConfigType;
+use Plugin\elepay42\Repository\ConfigRepository;
 
 class ConfigController extends AbstractController
 {
@@ -38,7 +38,7 @@ class ConfigController extends AbstractController
     }
 
     /**
-     * @Route("/%eccube_admin_route%/elepay/config", name="elepay_admin_config")
+     * @Route("/%eccube_admin_route%/elepay/config", name="elepay42_admin_config")
      * @param Request $request
      * @return Response
      */
@@ -55,7 +55,7 @@ class ConfigController extends AbstractController
             $this->entityManager->flush();
 
             $this->addSuccess('elepay.admin.save.success', 'admin');
-            return $this->redirectToRoute('elepay_admin_config');
+            return $this->redirectToRoute('elepay42_admin_config');
 
         } else if ($form->isSubmitted()) {
             foreach ($form->getErrors(true) as $error) {
@@ -63,7 +63,7 @@ class ConfigController extends AbstractController
             }
         }
 
-        return $this->render('@Elepay/admin/config.twig', [
+        return $this->render('@elepay42/admin/config.twig', [
             'form' => $form->createView()
         ]);
     }

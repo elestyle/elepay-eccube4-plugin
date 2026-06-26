@@ -1,5 +1,5 @@
 {
-  "name": "ec-cube/elepay",
+  "name": "ec-cube/elepay42",
   "version": "1.3.0",
   "description": "elepay決済プラグイン(4.2/4.3系)",
   "type": "eccube-plugin",
@@ -12,6 +12,6 @@
     }
   },
   "extra": {
-    "code": "Elepay"
+    "code": "elepay42"
   }
 }

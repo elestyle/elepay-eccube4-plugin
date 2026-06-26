@@ -1,6 +1,6 @@
 <?php
 
-namespace Plugin\Elepay\Form\Type\Admin;
+namespace Plugin\elepay42\Form\Type\Admin;
 
 use Doctrine\ORM\OptimisticLockException;
 use Doctrine\ORM\ORMException;
@@ -10,7 +10,7 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints as Assert;
 use Eccube\Common\EccubeConfig;
-use Plugin\Elepay\Entity\Config;
+use Plugin\elepay42\Entity\Config;
 
 class ConfigType extends AbstractType
 {

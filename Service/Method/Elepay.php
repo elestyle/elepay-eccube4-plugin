@@ -1,6 +1,6 @@
 <?php
 
-namespace Plugin\Elepay\Service\Method;
+namespace Plugin\elepay42\Service\Method;
 
 use Eccube\Service\PurchaseFlow\PurchaseException;
 use Eccube\Entity\Order;

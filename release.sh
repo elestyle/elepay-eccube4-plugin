@@ -1,10 +1,11 @@
 #!/bin/bash
 #
-# elepay 決済プラグインのリリース用パッケージ(zip)を作成するスクリプト。
+# elepay 決済プラグインのリリース用パッケージ(tar.gz)を作成するスクリプト。
 #
 # EC-CUBE プラグイン仕様に準拠:
 #   https://doc4.ec-cube.net/plugin_spec
-#   - プラグインのファイルは zip のルートに直接配置する(フォルダごと圧縮しない)
+#   - 配布形式は tar.gz(仕様の推奨形式)
+#   - プラグインのファイルはアーカイブのルートに直接配置する(フォルダごと圧縮しない)
 #   - composer.json は必須
 #   - .git / .DS_Store / .gitignore / macOS のリソースフォーク(._*, __MACOSX)は含めない
 #
@@ -30,17 +31,17 @@ INCLUDE=(
 )
 
 # --- パッケージから除外するファイルパターン --------------------------------
+# 仕様で除外が必須の .git / .DS_Store に加え、.gitignore も除外する。
 EXCLUDE=(
-  '*.DS_Store'
-  '*/.git/*'
-  '*.gitignore'
-  '__MACOSX/*'
-  '*/__MACOSX/*'
+  --exclude='.git'
+  --exclude='*/.git'
+  --exclude='.DS_Store'
+  --exclude='.gitignore'
 )
 
 # --- 出力ファイル名(composer.json の version を付与) ----------------------
 VERSION="$(jq -r '.version // empty' composer.json 2>/dev/null || true)"
-ZIP="elepay-eccube4-plugin${VERSION:+-v${VERSION}}.zip"
+ARCHIVE="elepay-eccube4-plugin${VERSION:+-v${VERSION}}.tar.gz"
 
 # --- 必須ファイル/ディレクトリの存在チェック -------------------------------
 for item in "${INCLUDE[@]}"; do
@@ -50,21 +51,22 @@ for item in "${INCLUDE[@]}"; do
   fi
 done
 
-# --- 既存の zip を削除してから作成 -----------------------------------------
-rm -f "$ZIP"
+# --- 既存のアーカイブを削除してから作成 ------------------------------------
+rm -f "$ARCHIVE"
 
-# COPYFILE_DISABLE=1 : macOS の AppleDouble(._*)を tar/zip に含めない
-# zip -X            : 余分なファイル属性(拡張属性など)を保存しない
-COPYFILE_DISABLE=1 zip -r -X "$ZIP" "${INCLUDE[@]}" -x "${EXCLUDE[@]}"
+# 仕様推奨の tar.gz 形式で作成する。
+#   COPYFILE_DISABLE=1 : macOS の AppleDouble(._*)をアーカイブに含めない
+#   -c 作成 / -z gzip / -v 一覧表示 / -f 出力ファイル
+COPYFILE_DISABLE=1 tar "${EXCLUDE[@]}" -czvf "$ARCHIVE" "${INCLUDE[@]}"
 
 echo ""
-echo "作成しました: $ZIP"
-echo "  サイズ : $(du -h "$ZIP" | cut -f1)"
-echo "  件数   : $(unzip -l "$ZIP" | tail -1 | awk '{print $2}') ファイル"
+echo "作成しました: $ARCHIVE"
+echo "  サイズ : $(du -h "$ARCHIVE" | cut -f1)"
+echo "  件数   : $(tar -tzf "$ARCHIVE" | grep -vc '/$') ファイル"
 
 # 念のため、除外すべきファイルが混入していないか検査する
-if unzip -l "$ZIP" | grep -qiE 'DS_Store|\.gitignore|__MACOSX|/\._'; then
+if tar -tzf "$ARCHIVE" | grep -qiE 'DS_Store|\.gitignore|__MACOSX|/\._|(^|/)\.git(/|$)'; then
   echo "警告: 除外対象のファイルがパッケージに含まれています。" >&2
-  unzip -l "$ZIP" | grep -iE 'DS_Store|\.gitignore|__MACOSX|/\._' >&2
+  tar -tzf "$ARCHIVE" | grep -iE 'DS_Store|\.gitignore|__MACOSX|/\._|(^|/)\.git(/|$)' >&2
   exit 1
 fi
