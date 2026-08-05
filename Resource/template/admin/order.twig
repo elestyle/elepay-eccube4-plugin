@@ -1,6 +1,8 @@
 <script>
 $(function () {
     var elepayIdMap = JSON.parse('{{ elepay_id_map|json_encode|e('js') }}');
+    // ルーターでパスを生成する. サブディレクトリ設置時のベースパスもここで解決される
+    var elepayRedirectPath = '{{ path('elepay_refund_validate')|e('js') }}';
     var $table = $('#search_result');
     var $th = $table.find('thead th:last').prev();
     $th.after($th.clone().html('{{ 'elepay.admin.order.table_col_elepay'|trans }}'));
@@ -26,8 +28,8 @@ $(function () {
         var elepayLink = '';
 
         if (elepayChargeId) {
-            elepayLink = '<a href="/elepay_admin_redirect?chargeId=' +
-                elepayChargeId +
+            elepayLink = '<a href="' + elepayRedirectPath + '?chargeId=' +
+                encodeURIComponent(elepayChargeId) +
                 '" target="_blank">{{ 'elepay.admin.order.go_to_elepay_admin'|trans }}</a>';
         }
 

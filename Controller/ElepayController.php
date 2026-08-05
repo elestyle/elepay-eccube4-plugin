@@ -14,6 +14,7 @@ use Elepay\ApiException;
 use Exception;
 use Eccube\Service\OrderHelper;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -110,12 +111,13 @@ class ElepayController extends AbstractController
             return $this->redirectToRoute('shopping_complete');
         }
 
-        $basePath = $request->getBasePath() ? $request->getBasePath() : '/';
-        $checkoutValidateUrl = $this->elepayHelper->addQuery(
-            $request->server->get('HTTP_ORIGIN') . $basePath . 'elepay_checkout_validate',
+        // ルーターで絶対 URL を生成する. サブディレクトリ設置時のベースパスもここで解決される
+        $checkoutValidateUrl = $this->generateUrl(
+            'elepay_checkout_validate',
             [
                 'orderNo' => $this->elepayHelper->getOrderNo($order)
-            ]
+            ],
+            UrlGeneratorInterface::ABSOLUTE_URL
         );
         $codeMetadata = [
             'client' => 'eccube',
