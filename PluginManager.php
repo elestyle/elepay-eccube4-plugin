@@ -144,17 +144,18 @@ class PluginManager extends AbstractPluginManager
             // If found, set its sort_no to 1 higher than them
             $sortNo = $topPayment ? $topPayment->getSortNo() + 1 : 0;
 
+            $eccubeConfig = $container->get(EccubeConfig::class);
+
+            // The payment name is initialized only on creation,
+            // so that a name edited on the admin screen survives re-enabling
             $payment = new Payment();
             $payment
                 ->setMethodClass(Elepay::class)
+                ->setMethod($eccubeConfig->get('elepay.name'))
                 ->setSortNo($sortNo)
-                ->setCharge(0);
+                ->setCharge(0)
+                ->setVisible(false);
         }
-
-        $eccubeConfig = $container->get(EccubeConfig::class);
-        $payment
-            ->setMethod($eccubeConfig->get('elepay.name'))
-            ->setVisible(false);
 
         $entityManager->persist($payment);
         $entityManager->flush();
