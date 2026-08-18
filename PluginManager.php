@@ -3,6 +3,7 @@
 namespace Plugin\elepay42;
 
 use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\OptimisticLockException;
 use Doctrine\ORM\ORMException;
 use Eccube\Common\EccubeConfig;
@@ -127,8 +128,7 @@ class PluginManager extends AbstractPluginManager
         $paymentRepository = $entityManager->getRepository(Payment::class);
 
         // Check that the payment method is registered in the dtb_payment table in the database
-        /** @var Payment $payment */
-        $payment = $paymentRepository->findOneBy(['method_class' => Elepay::class]);
+        $payment = $this->findPayment($entityManager);
 
         if (empty($payment)) {
             // Get the largest payment method of Rank other than Elepay
@@ -187,8 +187,9 @@ class PluginManager extends AbstractPluginManager
 
     /**
      * Remove payment method
-     * When the payment method overpays, it is bound to the order data and cannot be deleted.
-     * So don't do real delete, just do logical disable
+     * The record itself is kept and only hidden, because past order data refers to it.
+     * Its delivery bindings are dropped so that the remaining record can be deleted
+     * on the admin screen without leaving rows behind in dtb_payment_option.
      *
      * @param ContainerInterface $container
      * @throws ORMException
@@ -198,11 +199,16 @@ class PluginManager extends AbstractPluginManager
     {
         /** @var EntityManager $entityManager */
         $entityManager = $container->get('doctrine')->getManager();
-        /** @var PaymentRepository $paymentRepository */
-        $paymentRepository = $entityManager->getRepository(Payment::class);
 
-        /** @var Payment $payment */
-        $payment = $paymentRepository->findOneBy(['method_class' => Elepay::class]);
+        $payment = $this->findPayment($entityManager);
+        if (is_null($payment)) {
+            return;
+        }
+
+        foreach ($payment->getPaymentOptions() as $paymentOption) {
+            $entityManager->remove($paymentOption);
+        }
+
         $payment->setVisible(false);
         $entityManager->persist($payment);
         $entityManager->flush();
@@ -217,16 +223,7 @@ class PluginManager extends AbstractPluginManager
      */
     public function enablePaymentMethod(ContainerInterface $container): void
     {
-        /** @var EntityManager $entityManager */
-        $entityManager = $container->get('doctrine')->getManager();
-        /** @var PaymentRepository $paymentRepository */
-        $paymentRepository = $entityManager->getRepository(Payment::class);
-
-        /** @var Payment $payment */
-        $payment = $paymentRepository->findOneBy(['method_class' => Elepay::class]);
-        $payment->setVisible(true);
-        $entityManager->persist($payment);
-        $entityManager->flush();
+        $this->setPaymentVisible($container, true);
     }
 
     /**
@@ -238,16 +235,45 @@ class PluginManager extends AbstractPluginManager
      */
     public function disablePaymentMethod(ContainerInterface $container): void
     {
+        $this->setPaymentVisible($container, false);
+    }
+
+    /**
+     * Switch the display state of the payment method
+     *
+     * @param ContainerInterface $container
+     * @param bool $visible
+     * @throws ORMException
+     * @throws OptimisticLockException
+     */
+    private function setPaymentVisible(ContainerInterface $container, bool $visible): void
+    {
         /** @var EntityManager $entityManager */
         $entityManager = $container->get('doctrine')->getManager();
+
+        $payment = $this->findPayment($entityManager);
+        if (is_null($payment)) {
+            return;
+        }
+
+        $payment->setVisible($visible);
+        $entityManager->persist($payment);
+        $entityManager->flush();
+    }
+
+    /**
+     * Find the payment method of this plugin
+     * Returns null when the record has been deleted on the admin screen
+     *
+     * @param EntityManagerInterface $entityManager
+     * @return Payment|null
+     */
+    private function findPayment(EntityManagerInterface $entityManager): ?Payment
+    {
         /** @var PaymentRepository $paymentRepository */
         $paymentRepository = $entityManager->getRepository(Payment::class);
 
-        /** @var Payment $payment */
-        $payment = $paymentRepository->findOneBy(['method_class' => Elepay::class]);
-        $payment->setVisible(false);
-        $entityManager->persist($payment);
-        $entityManager->flush();
+        return $paymentRepository->findOneBy(['method_class' => Elepay::class]);
     }
 
     /**
