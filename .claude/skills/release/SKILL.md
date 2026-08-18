@@ -55,19 +55,33 @@ git push origin master
 
 ### 4. Create the GitHub Release
 
-Note the tag has no `v` and the title has `v`:
+Write the notes to a file first — the fixed tagline plus what actually changed in this version:
+
+```markdown
+elepay-eccube4-plugin for eccube 4.2/4.3
+
+## Changes
+
+- [<type>: <what changed, from the user's point of view>](https://github.com/elestyle/elepay-eccube4-plugin/commit/<full-sha>)
+
+<必要なら加盟店向けの補足を日本語で。挙動が変わる修正なら、加盟店側の対応が必要かどうかを明記する。>
+```
+
+Then create the release. Note the tag has no `v` and the title has `v`:
 
 ```bash
 gh release create X.Y.Z \
   --target master \
   --title "vX.Y.Z" \
-  --notes "elepay-eccube4-plugin for eccube 4.2/4.3" \
+  --notes-file notes.md \
   -R elestyle/elepay-eccube4-plugin \
   elepay-eccube4-plugin-vX.Y.Z.tar.gz
 ```
 
 - This **creates the tag `X.Y.Z`** on the latest master commit and uploads the tarball asset.
-- `--notes` reuses the fixed text used by past versions: `elepay-eccube4-plugin for eccube 4.2/4.3`.
+- The tagline `elepay-eccube4-plugin for eccube 4.2/4.3` is the fixed header; the `## Changes` list is per-version and must not be omitted — a release whose notes are the tagline alone tells nobody what shipped.
+- **The repo is public**: never put internal ticket IDs (`SSO-xxx` / `SXP-xxx` / `DEV-xxxx`) in the notes. Link the commit instead.
+- Notes can be fixed after publishing without rebuilding the package: `gh release edit X.Y.Z -R elestyle/elepay-eccube4-plugin --notes-file notes.md`.
 - The newest non-prerelease automatically becomes Latest.
 
 ### 5. Verify
@@ -86,7 +100,7 @@ gh release list -R elestyle/elepay-eccube4-plugin \
 git ls-remote --tags origin X.Y.Z
 ```
 
-Expected: `name = vX.Y.Z`, `tagName = X.Y.Z`, `isDraft=false`, `isPrerelease=false`, asset `elepay-eccube4-plugin-vX.Y.Z.tar.gz`, and Latest = `X.Y.Z`.
+Expected: `name = vX.Y.Z`, `tagName = X.Y.Z`, `isDraft=false`, `isPrerelease=false`, asset `elepay-eccube4-plugin-vX.Y.Z.tar.gz`, Latest = `X.Y.Z`, and a `body` carrying this version's `## Changes` list.
 
 ## Naming conventions cheat sheet
 
@@ -96,5 +110,5 @@ Expected: `name = vX.Y.Z`, `tagName = X.Y.Z`, `isDraft=false`, `isPrerelease=fal
 | git tag | `X.Y.Z` (no v) | `1.3.1` |
 | Release title | `vX.Y.Z` (with v) | `v1.3.1` |
 | Package filename | `elepay-eccube4-plugin-vX.Y.Z.tar.gz` | `...-v1.3.1.tar.gz` |
-| Release notes | fixed text | `elepay-eccube4-plugin for eccube 4.2/4.3` |
+| Release notes | fixed tagline + per-version `## Changes` list | see step 4 |
 | Commit message | `build(core): Update package version to X.Y.Z` | — |
