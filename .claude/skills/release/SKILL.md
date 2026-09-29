@@ -1,9 +1,11 @@
 ---
 name: release
-description: Full workflow and gotcha checklist for publishing a new version of the elepay EC-CUBE 4.2/4.3 plugin. Use when the user wants to release / cut a new version / publish a GitHub Release / tag / bump the version / re-publish this plugin. Covers the single version source, release.sh packaging, the tag-vs-Release-title naming difference, gh publishing, and verification.
+description: Full workflow and gotcha checklist for publishing a new version of the elepay EC-CUBE 4.2/4.3/4.4 plugin. Use when the user wants to release / cut a new version / publish a GitHub Release / tag / bump the version / re-publish this plugin. Covers the single version source, release.sh packaging, the tag-vs-Release-title naming difference, gh publishing, and verification.
 ---
 
 # elepay EC-CUBE Plugin Release Guide
+
+When a version is also submitted to the EC-CUBE store, the 「戻り先URL」 is described in `docs/eccube-store.md`.
 
 Standard workflow to publish a new version of this plugin (repo `elestyle/elepay-eccube4-plugin`). Follow the steps in order; read the gotchas first.
 
@@ -58,7 +60,7 @@ git push origin master
 Write the notes to a file first — the fixed tagline plus what actually changed in this version:
 
 ```markdown
-elepay-eccube4-plugin for eccube 4.2/4.3
+elepay-eccube4-plugin for eccube 4.2/4.3/4.4
 
 ## Changes
 
@@ -79,7 +81,7 @@ gh release create X.Y.Z \
 ```
 
 - This **creates the tag `X.Y.Z`** on the latest master commit and uploads the tarball asset.
-- The tagline `elepay-eccube4-plugin for eccube 4.2/4.3` is the fixed header; the `## Changes` list is per-version and must not be omitted — a release whose notes are the tagline alone tells nobody what shipped.
+- The tagline `elepay-eccube4-plugin for eccube 4.2/4.3/4.4` is the fixed header; the `## Changes` list is per-version and must not be omitted — a release whose notes are the tagline alone tells nobody what shipped.
 - **The repo is public**: never put internal ticket IDs (`SSO-xxx` / `SXP-xxx` / `DEV-xxxx`) in the notes. Link the commit instead.
 - Notes can be fixed after publishing without rebuilding the package: `gh release edit X.Y.Z -R elestyle/elepay-eccube4-plugin --notes-file notes.md`.
 - The newest non-prerelease automatically becomes Latest.

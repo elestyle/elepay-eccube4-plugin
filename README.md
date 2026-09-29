@@ -4,16 +4,30 @@
 Please see the instructions for user installation [here](https://developer.elepay.io/docs/ec-cube-plugin).
 
 ## Development Infomations
+### Supported versions
+
+EC-CUBE 4.2 / 4.3 / 4.4 (plugin code `elepay42`), all from one codebase. The lowest runtime is PHP 7.4 (EC-CUBE 4.2), so code must stay valid on it.
+
 ### Install dependencies
 
-Put `elepay-php-sdk` in the `Resource/vendor/` directory
-
-Use the following command to generate autoload in the `Resource/vendor/` directory
+`Resource/vendor/` (gitignored) holds `elepay-php-sdk` and its dependencies. Generate it with:
 
 ```shell
-COMPOSER_VENDOR_DIR=Resource/vendor composer require elestyle/elepay-php-sdk
-COMPOSER_VENDOR_DIR=Resource/vendor composer dumpautoload -o
+./build-vendor.sh
 ```
+
+It resolves the dependencies against PHP 7.4 regardless of the local PHP, appends the bundled autoloader after the host's, and patches the SDK's implicit nullable parameters. It falls back to Docker when composer is not installed.
+
+### Development rules
+
+- Routes and Doctrine mappings (including `@EntityExtension`) are declared twice: as docblock annotations (EC-CUBE 4.2/4.3) and as PHP attributes (EC-CUBE 4.4). Keep the two identical, and write every attribute on a single line, since PHP 7.4 treats a single-line `#[...]` as a comment.
+- Use only PHP 7.4 syntax: no union types, no named arguments (e.g. validator constraints take positional arguments).
+
+### Documents
+
+- [docs/architecture.md](docs/architecture.md): payment flow, order status handling, concurrency, ownership rule, plugin lifecycle
+- [docs/compatibility.md](docs/compatibility.md): EC-CUBE 4.2 / 4.3 / 4.4 compatibility rules
+- [docs/eccube-store.md](docs/eccube-store.md): 「戻り先URL」 for the EC-CUBE store (オーナーズストア)
 
 ### Directory description
 
