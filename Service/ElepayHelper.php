@@ -4,6 +4,7 @@ namespace Plugin\elepay42\Service;
 
 require_once(__DIR__ . '/../Resource/vendor/autoload.php');
 
+use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 use Eccube\Entity\BaseInfo;
 use Eccube\Entity\Master\OrderStatus;
@@ -152,42 +153,85 @@ class ElepayHelper
     public function getCartOrder()
     {
         $preOrderId = $this->cartService->getPreOrderId();
-        // $orderStatus = $this->orderStatusRepository->find(OrderStatus::PENDING);
 
         return $this->orderRepository->findOneBy([
             'pre_order_id' => $preOrderId,
-            // 'OrderStatus' => $orderStatus,
         ]);
     }
 
     /**
-     * Get Cart Key
-     *
-     * @return string
+     * 現在のセッションのカートを空にする
      */
-    public function getCartKey()
+    public function cartClear()
     {
-        $cart = $this->cartService->getCart();
-        if (!empty($cart)) {
-            return $cart->getCartKey();
-        }
-        return null;
+        $this->cartService->clear();
     }
 
     /**
-     * Cart Clear
+     * 受注と同じ pre_order_id を持つカートを削除する. 既に削除済みの場合は何もしない
      *
-     * @param $cartKey
+     * @param string|null $preOrderId
      */
-    public function cartClear($cartKey = null)
+    public function removeCartByPreOrderId($preOrderId)
     {
-        if (!empty($cartKey)) {
-            $cart = $this->cartRepository->findOneBy(['cart_key' => $cartKey]);
+        if (empty($preOrderId)) {
+            return;
+        }
+        $cart = $this->cartRepository->findOneBy(['pre_order_id' => $preOrderId]);
+        if ($cart !== null) {
             $this->entityManager->remove($cart);
             $this->entityManager->flush();
-        } else {
-            $this->cartService->clear();
         }
+    }
+
+    /**
+     * 受注ステータスを、現在のステータスが $fromStatusIds のいずれかである場合に限り $toStatusId へ変更する.
+     *
+     * 決済の確定とキャンセルが同時に起きても一方だけが後続処理を行えるよう、条件付き UPDATE で DB 上の
+     * 状態遷移を 1 リクエストに絞る. 同じ行への後の UPDATE は先のトランザクションの終了まで行ロックで待ち、
+     * 遷移済みの行には一致しないため false になる.
+     * リクエスト全体のトランザクション内で呼ぶこと. 後続処理が失敗した場合は、この UPDATE ごとロールバックさせる必要がある.
+     * 呼び出し側のエンティティは更新しないため、エンティティのステータスは呼び出し側で合わせる
+     *
+     * @param Order $order
+     * @param int[] $fromStatusIds
+     * @param int $toStatusId
+     * @return bool この呼び出しで遷移させた場合 true
+     */
+    public function transitionOrderStatus(Order $order, array $fromStatusIds, int $toStatusId): bool
+    {
+        $affected = $this->entityManager->createQueryBuilder()
+            ->update(Order::class, 'o')
+            ->set('o.OrderStatus', ':to')
+            ->where('o.id = :id')
+            ->andWhere('o.OrderStatus IN (:from)')
+            ->setParameter('to', $this->orderStatusRepository->find($toStatusId))
+            ->setParameter('from', $fromStatusIds)
+            ->setParameter('id', $order->getId())
+            ->getQuery()
+            ->execute();
+
+        return $affected === 1;
+    }
+
+    /**
+     * DB 上の最新の受注ステータス ID を行ロック付きで取得する.
+     *
+     * 他のリクエストが先に遷移させた後の状態を知るためのもの. ロックなしの SELECT は MySQL の REPEATABLE READ では
+     * トランザクション開始時点のスナップショットを返すため、ロック付きで読む
+     *
+     * @param Order $order
+     * @return int|null
+     */
+    public function fetchLatestOrderStatusId(Order $order): ?int
+    {
+        $statusId = $this->entityManager
+            ->createQuery('SELECT IDENTITY(o.OrderStatus) FROM ' . Order::class . ' o WHERE o.id = :id')
+            ->setParameter('id', $order->getId())
+            ->setLockMode(LockMode::PESSIMISTIC_WRITE)
+            ->getSingleScalarResult();
+
+        return $statusId === null ? null : (int)$statusId;
     }
 
     /**
@@ -200,7 +244,7 @@ class ElepayHelper
     }
 
     /**
-     * 受注をIDで検索する.
+     * 受注を受注番号で検索する.
      *
      * @param String $orderNo
      *
@@ -214,7 +258,7 @@ class ElepayHelper
     }
 
     /**
-     * 返回 PROCESSING 订单状态对象
+     * 購入処理中の受注ステータスを返す
      *
      * @return object|null
      */
@@ -224,7 +268,7 @@ class ElepayHelper
     }
 
     /**
-     * 返回 PENDING 订单状态对象
+     * 決済処理中の受注ステータスを返す
      *
      * @return object|null
      */
@@ -234,7 +278,7 @@ class ElepayHelper
     }
 
     /**
-     * 返回 PAID 订单状态对象
+     * 入金済みの受注ステータスを返す
      *
      * @return object|null
      */
@@ -257,7 +301,13 @@ class ElepayHelper
         /** @var CodeReq $codeReq */
         $codeReq = new CodeReq();
         $codeReq->setOrderNo($this->getOrderNo($order));
-        $codeReq->setAmount($order->getPaymentTotal());
+        // Order の金額は DECIMAL 由来の文字列（"1000.00" 等）で返ることがあるため整数に正規化する.
+        // amount は整数しか受け付けないので、端数のある金額は切り捨てて請求せずエラーにする
+        $paymentTotal = $order->getPaymentTotal();
+        if ((int)$paymentTotal != $paymentTotal) {
+            throw new \InvalidArgumentException('Payment total with a fractional part is not supported: ' . $paymentTotal);
+        }
+        $codeReq->setAmount((int)$paymentTotal);
         $codeReq->setCurrency($order->getCurrencyCode());
         $codeReq->setFrontUrl($frontUrl);
         $codeReq->setMetadata($metadata);
@@ -305,7 +355,7 @@ class ElepayHelper
     public function getOrderNo($order)
     {
         // Since the ECCUBE orderNo is an increment number, Create Charge will fail if a database reset occurs
-        // Add preOrderId here to prevent duplicate order numbers
+        // Append the current time here to prevent duplicate order numbers
         return $order->getOrderNo() . '-' . date('His');
     }
 

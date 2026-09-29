@@ -4,8 +4,6 @@ namespace Plugin\elepay42;
 
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\OptimisticLockException;
-use Doctrine\ORM\ORMException;
 use Eccube\Common\EccubeConfig;
 use Symfony\Component\Filesystem\Filesystem;
 use Psr\Container\ContainerInterface;
@@ -13,6 +11,9 @@ use Eccube\Plugin\AbstractPluginManager;
 use Eccube\Entity\Payment;
 use Eccube\Entity\PaymentOption;
 use Eccube\Entity\Delivery;
+use Eccube\Entity\Layout;
+use Eccube\Entity\Page;
+use Eccube\Entity\PageLayout;
 use Eccube\Repository\PaymentRepository;
 use Eccube\Repository\PaymentOptionRepository;
 use Eccube\Repository\DeliveryRepository;
@@ -22,6 +23,13 @@ use Plugin\elepay42\Service\Method\Elepay;
 
 class PluginManager extends AbstractPluginManager
 {
+    /**
+     * プラグインが追加するフロントのページ. file_name は管理画面のページ編集でテンプレートを読むために使われる
+     */
+    private const PAGES = [
+        ['url' => 'elepay_paid', 'name' => 'elepay決済完了', 'file_name' => '@elepay42/default/Shopping/paid'],
+    ];
+
     /**
      * @var string
      */
@@ -46,45 +54,52 @@ class PluginManager extends AbstractPluginManager
      * @param array $config
      * @param ContainerInterface $container
      */
-    public function install(array $config, ContainerInterface $container)
+    public function install(array $config, ContainerInterface $container): void
     {
         // リソースファイルのコピー
 //        $this->copyAssets();
     }
 
     /**
+     * 有効なままバージョンアップされた場合も、新しいバージョンで追加したページを登録する
+     *
      * @param array $config
      * @param ContainerInterface $container
-     * @throws ORMException
-     * @throws OptimisticLockException
      */
-    public function uninstall(array $config, ContainerInterface $container)
+    public function update(array $config, ContainerInterface $container): void
+    {
+        $this->registerPage($container);
+    }
+
+    /**
+     * @param array $config
+     * @param ContainerInterface $container
+     */
+    public function uninstall(array $config, ContainerInterface $container): void
     {
         // リソースファイルの削除
 //        $this->removeAssets();
         $this->removePaymentMethod($container);
+        $this->removePage($container);
     }
 
     /**
      * @param array $config
      * @param ContainerInterface $container
-     * @throws ORMException
-     * @throws OptimisticLockException
      */
-    public function enable(array $config, ContainerInterface $container)
+    public function enable(array $config, ContainerInterface $container): void
     {
         $this->registerPluginConfig($container);
         $this->registerPaymentMethod($container, $config);
         $this->enablePaymentMethod($container);
+        $this->registerPage($container);
     }
 
     /**
      * @param array $config
      * @param ContainerInterface $container
-     * @throws ORMException
-     * @throws OptimisticLockException
      */
-    public function disable(array $config, ContainerInterface $container)
+    public function disable(array $config, ContainerInterface $container): void
     {
         $this->disablePaymentMethod($container);
     }
@@ -93,8 +108,6 @@ class PluginManager extends AbstractPluginManager
      * Register the default plugin configuration
      *
      * @param ContainerInterface $container
-     * @throws ORMException
-     * @throws OptimisticLockException
      */
     private function registerPluginConfig(ContainerInterface $container): void
     {
@@ -117,8 +130,6 @@ class PluginManager extends AbstractPluginManager
      *
      * @param ContainerInterface $container
      * @param array $config
-     * @throws ORMException
-     * @throws OptimisticLockException
      */
     public function registerPaymentMethod(ContainerInterface $container, $config)
     {
@@ -192,8 +203,6 @@ class PluginManager extends AbstractPluginManager
      * on the admin screen without leaving rows behind in dtb_payment_option.
      *
      * @param ContainerInterface $container
-     * @throws ORMException
-     * @throws OptimisticLockException
      */
     public function removePaymentMethod(ContainerInterface $container): void
     {
@@ -218,8 +227,6 @@ class PluginManager extends AbstractPluginManager
      * Enable payment method
      *
      * @param ContainerInterface $container
-     * @throws ORMException
-     * @throws OptimisticLockException
      */
     public function enablePaymentMethod(ContainerInterface $container): void
     {
@@ -230,8 +237,6 @@ class PluginManager extends AbstractPluginManager
      * Disable payment methods
      *
      * @param ContainerInterface $container
-     * @throws ORMException
-     * @throws OptimisticLockException
      */
     public function disablePaymentMethod(ContainerInterface $container): void
     {
@@ -243,8 +248,6 @@ class PluginManager extends AbstractPluginManager
      *
      * @param ContainerInterface $container
      * @param bool $visible
-     * @throws ORMException
-     * @throws OptimisticLockException
      */
     private function setPaymentVisible(ContainerInterface $container, bool $visible): void
     {
@@ -277,6 +280,67 @@ class PluginManager extends AbstractPluginManager
     }
 
     /**
+     * フロントのページとして登録する. 未登録のルートは下層ページのレイアウト（ヘッダー・フッター）が適用されないため
+     *
+     * @param ContainerInterface $container
+     */
+    private function registerPage(ContainerInterface $container): void
+    {
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = $container->get('doctrine')->getManager();
+
+        foreach (self::PAGES as $pageInfo) {
+            if ($entityManager->getRepository(Page::class)->findOneBy(['url' => $pageInfo['url']]) !== null) {
+                continue;
+            }
+
+            $page = new Page();
+            $page
+                ->setName($pageInfo['name'])
+                ->setUrl($pageInfo['url'])
+                ->setFileName($pageInfo['file_name'])
+                ->setEditType(Page::EDIT_TYPE_DEFAULT)
+                ->setMetaRobots('noindex');
+            $entityManager->persist($page);
+            $entityManager->flush();
+
+            /** @var Layout $layout */
+            $layout = $entityManager->find(Layout::class, Layout::DEFAULT_LAYOUT_UNDERLAYER_PAGE);
+
+            $pageLayout = new PageLayout();
+            $pageLayout
+                ->setPage($page)
+                ->setPageId($page->getId())
+                ->setLayout($layout)
+                ->setLayoutId($layout->getId())
+                ->setSortNo(0);
+            $entityManager->persist($pageLayout);
+            $entityManager->flush();
+        }
+    }
+
+    /**
+     * @param ContainerInterface $container
+     */
+    private function removePage(ContainerInterface $container): void
+    {
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = $container->get('doctrine')->getManager();
+
+        foreach (self::PAGES as $pageInfo) {
+            $page = $entityManager->getRepository(Page::class)->findOneBy(['url' => $pageInfo['url']]);
+            if ($page === null) {
+                continue;
+            }
+            foreach ($entityManager->getRepository(PageLayout::class)->findBy(['page_id' => $page->getId()]) as $pageLayout) {
+                $entityManager->remove($pageLayout);
+            }
+            $entityManager->remove($page);
+            $entityManager->flush();
+        }
+    }
+
+    /**
      * Copy Resource Directories
      */
     private function copyAssets()
@@ -293,25 +357,5 @@ class PluginManager extends AbstractPluginManager
     {
         $file = new Filesystem();
         $file->remove($this->target_dir);
-    }
-
-    /**
-     * Open EntityManager
-     *
-     * @param EntityManager $entityManager
-     * @return EntityManager
-     * @throws ORMException
-     */
-    private function openEntityManager($entityManager)
-    {
-        if ($entityManager->isOpen()) {
-            return $entityManager;
-        } else {
-            return $entityManager->create(
-                $entityManager->getConnection(),
-                $entityManager->getConfiguration(),
-                $entityManager->getEventManager()
-            );
-        }
     }
 }

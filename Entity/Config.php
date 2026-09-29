@@ -8,11 +8,16 @@ use stdClass;
 
 /**
  * Config
- * 插件安装时，会根据此文件自动创建数据库表
+ * プラグインのインストール時に、この定義から plg_elepay_config テーブルが作成される
+ *
+ * マッピングは docblock アノテーション（EC-CUBE 4.2/4.3 が読む）と PHP Attribute（4.4 が読む）の二重定義。
+ * PHP 7.4 で Attribute を行コメントとして読み飛ばさせるため、Attribute は必ず 1 行で書くこと。
  *
  * @ORM\Table(name="plg_elepay_config")
  * @ORM\Entity(repositoryClass="Plugin\elepay42\Repository\ConfigRepository")
  */
+#[ORM\Table(name: 'plg_elepay_config')]
+#[ORM\Entity(repositoryClass: \Plugin\elepay42\Repository\ConfigRepository::class)]
 class Config extends AbstractEntity
 {
 
@@ -23,6 +28,9 @@ class Config extends AbstractEntity
      * @ORM\Id
      * @ORM\GeneratedValue(strategy="IDENTITY")
      */
+    #[ORM\Column(name: 'id', type: 'integer', options: ['unsigned' => true])]
+    #[ORM\Id]
+    #[ORM\GeneratedValue(strategy: 'IDENTITY')]
     private $id;
 
     /**
@@ -30,6 +38,7 @@ class Config extends AbstractEntity
      *
      * @ORM\Column(name="public_key", type="string", length=255, nullable=true)
      */
+    #[ORM\Column(name: 'public_key', type: 'string', length: 255, nullable: true)]
     private $public_key;
 
     /**
@@ -37,6 +46,7 @@ class Config extends AbstractEntity
      *
      * @ORM\Column(name="secret_key", type="string", length=255, nullable=true)
      */
+    #[ORM\Column(name: 'secret_key', type: 'string', length: 255, nullable: true)]
     private $secret_key;
 
 

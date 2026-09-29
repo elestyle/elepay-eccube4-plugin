@@ -27,7 +27,7 @@
                                     <label class="col-3">
                                         {{ "elepay.admin.config.from.#{key}"|trans }}
                                         {% if item.vars.required %}
-                                            <span class="badge badge-primary ml-1">{{ 'elepay.admin.config.required'|trans }}</span>
+                                            <span class="badge badge-primary bg-primary ml-1 ms-1">{{ 'elepay.admin.config.required'|trans }}</span>
                                         {% endif %}
                                     </label>
                                     <div class="col mb-2">
@@ -54,9 +54,7 @@
                             <div class="col">
                                 <div class="input-group">
                                     <input id="paid_webhook_url" type="text" class="form-control" value="{{ url('elepay_paid_webhook') }}" readonly>
-                                    <div class="input-group-append">
-                                        <button class="btn btn-outline-secondary ec-elepay-copy-btn" type="button" data-clipboard-target="#paid_webhook_url">{{ 'elepay.admin.config.copy'|trans }}</button>
-                                    </div>
+                                    <button class="btn btn-outline-secondary ec-elepay-copy-btn" type="button" data-clipboard-target="#paid_webhook_url">{{ 'elepay.admin.config.copy'|trans }}</button>
                                 </div>
                             </div>
                         </div>

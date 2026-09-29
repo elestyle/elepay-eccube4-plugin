@@ -1,0 +1,24 @@
+{% extends 'default_frame.twig' %}
+
+{% set body_class = 'cart_page' %}
+
+{% block main %}
+<div class="ec-role">
+    <div class="ec-pageHeader">
+        <h1>{{ 'elepay.front.paid.title'|trans }}</h1>
+    </div>
+</div>
+
+<div class="ec-role">
+    <div class="ec-off3Grid">
+        <div class="ec-off3Grid__cell">
+            <p class="ec-reportDescription">{{ 'elepay.front.paid.message'|trans }}</p>
+            <div class="ec-off4Grid">
+                <div class="ec-off4Grid__cell">
+                    <a class="ec-blockBtn--cancel" href="{{ url('homepage') }}">{{ 'elepay.front.paid.back_to_top'|trans }}</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

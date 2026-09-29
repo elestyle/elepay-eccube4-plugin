@@ -2,8 +2,6 @@
 
 namespace Plugin\elepay42\Form\Type\Admin;
 
-use Doctrine\ORM\OptimisticLockException;
-use Doctrine\ORM\ORMException;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -24,8 +22,6 @@ class ConfigType extends AbstractType
      * ConfigType constructor.
      *
      * @param EccubeConfig $eccubeConfig
-     * @throws ORMException
-     * @throws OptimisticLockException
      */
     public function __construct(
         EccubeConfig $eccubeConfig
@@ -43,29 +39,23 @@ class ConfigType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
         $builder
-            // ChoiceType Document
-            // https://symfony.com/doc/current/reference/forms/types/choice.html
+            // 制約は位置引数で渡す. 配列オプションは Symfony 7.3 以降で非推奨、
+            // 名前付き引数は PHP 7.4（EC-CUBE 4.2）で使えないため
             ->add('public_key', TextType::class, [
                 'required' => true,
                 'constraints' => [
-                    new Assert\NotBlank(['message' => trans('elepay.admin.config.from.validation.public_key')]),
-                    new Assert\Length(['max' => $this->eccubeConfig['eccube_smtext_len']]),
-                    new Assert\Regex([
-                        'pattern' => '/^[[:graph:]]+$/i',
-                        'message' => 'form_error.graph_only',
-                    ]),
+                    new Assert\NotBlank(null, trans('elepay.admin.config.from.validation.public_key')),
+                    new Assert\Length(null, null, $this->eccubeConfig['eccube_smtext_len']),
+                    new Assert\Regex('/^[[:graph:]]+$/i', 'form_error.graph_only'),
                 ],
             ])
 
             ->add('secret_key', TextType::class, [
                 'required' => true,
                 'constraints' => [
-                    new Assert\NotBlank(['message' => trans('elepay.admin.config.from.validation.secret_key')]),
-                    new Assert\Length(['max' => $this->eccubeConfig['eccube_smtext_len']]),
-                    new Assert\Regex([
-                        'pattern' => '/^[[:graph:]]+$/',
-                        'message' => 'form_error.graph_only',
-                    ]),
+                    new Assert\NotBlank(null, trans('elepay.admin.config.from.validation.secret_key')),
+                    new Assert\Length(null, null, $this->eccubeConfig['eccube_smtext_len']),
+                    new Assert\Regex('/^[[:graph:]]+$/', 'form_error.graph_only'),
                 ],
             ])
         ;

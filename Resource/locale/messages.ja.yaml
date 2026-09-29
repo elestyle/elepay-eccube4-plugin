@@ -25,3 +25,6 @@ elepay.front.checkout.paying: 支払い処理中...
 elepay.front.checkout.repay: もう一度支払う
 elepay.front.checkout.back: 戻る
 elepay.front.info.payment_method_not_support: このデバイスはサポートしていません
+elepay.front.paid.title: お支払い完了
+elepay.front.paid.message: お支払いが完了しました。ご注文内容はご登録のメールアドレスへお送りした注文確認メールをご確認ください。
+elepay.front.paid.back_to_top: トップページへ

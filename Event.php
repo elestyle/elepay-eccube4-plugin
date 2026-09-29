@@ -14,7 +14,6 @@ use Knp\Component\Pager\Pagination\SlidingPagination;
 use Knp\Component\Pager\PaginatorInterface;
 use Plugin\elepay42\Entity\Config;
 use Plugin\elepay42\Service\ElepayHelper;
-use SunCat\MobileDetectBundle\DeviceDetector\MobileDetector;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Plugin\elepay42\Repository\ConfigRepository;
 use Plugin\elepay42\Service\Method\Elepay;
