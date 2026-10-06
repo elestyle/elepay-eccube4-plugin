@@ -78,7 +78,6 @@ class Event implements EventSubscriberInterface
         // When the template is rendered, it trigger the corresponding event
         return [
             'Shopping/index.twig' => 'index',
-            'Shopping/confirm.twig' => 'confirm',
             '@admin/Order/index.twig' => 'order',
             EccubeEvents::ADMIN_ORDER_INDEX_SEARCH => 'orderSearch'
         ];
@@ -110,25 +109,6 @@ class Event implements EventSubscriberInterface
 
         $event->setParameters(array_merge($event->getParameters(), $parameters));
         $event->addSnippet('@elepay42/default/Shopping/info.twig');
-    }
-
-    /**
-     * Payment confirmation page
-     *
-     * @param TemplateEvent $event
-     */
-    public function confirm(TemplateEvent $event): void
-    {
-        /** @var Order $order */
-        $order = $this->elepayHelper->getCartOrder();
-        if ($order) {
-            $payment = $order->getPayment();
-            $parameters = [
-                'payment_method' => $payment->getMethod()
-            ];
-            $event->setParameters(array_merge($event->getParameters(), $parameters));
-        }
-        $event->addSnippet('@elepay42/default/Shopping/confirm_button.twig');
     }
 
     /**
