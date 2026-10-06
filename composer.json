@@ -1,6 +1,6 @@
 {
   "name": "ec-cube/elepay42",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "elepay決済プラグイン(4.2/4.3/4.4系)",
   "type": "eccube-plugin",
   "require": {
