@@ -1,7 +1,10 @@
 <div class="hidden">
     <div id="elepay_info">
         {% for item in payment_methods %}
-            <div class="elepay-payment-method-icon" style="background-image: url({{ item.image }})"></div>
+            {# 外部 JSON 由来の URL を CSS の url() に埋め込まず、src 属性として出力する #}
+            {% if item.image %}
+                <img class="elepay-payment-method-icon" src="{{ item.image }}" alt="{{ item.name }}" title="{{ item.name }}">
+            {% endif %}
         {% endfor %}
     </div>
 </div>
@@ -9,7 +12,7 @@
 {% block javascript %}
 <script>
 $(function () {
-    var $radio = $('input#shopping_order_Payment_{{ payment_id }}');
+    var $radio = $('input#shopping_order_Payment_{{ payment_id|e('js') }}');
     var $label = $radio.siblings('label');
     $label.after($('#elepay_info'));
 });
@@ -29,9 +32,8 @@ $(function () {
     margin-bottom: 8px;
     width: 24px;
     height: 20px;
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: contain;
+    object-fit: contain;
+    vertical-align: middle;
 }
 </style>
 {% endblock %}

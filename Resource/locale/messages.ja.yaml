@@ -11,6 +11,7 @@ elepay.admin.config.back: プラグイン一覧
 elepay.admin.config.copy: コピー
 elepay.admin.config.from.public_key: パブリックキー
 elepay.admin.config.from.secret_key: シークレットキー
+elepay.admin.config.from.secret_key_placeholder: 設定済み（変更する場合のみ入力してください）
 elepay.admin.config.from.validation.public_key: ※ パブリックキーが入力されていません。
 elepay.admin.config.from.validation.secret_key: ※ シークレットキーが入力されていません。
 elepay.admin.config.webhook: Webhook設定

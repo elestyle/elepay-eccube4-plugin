@@ -7,14 +7,18 @@ How the payment flow, order state handling and plugin lifecycle fit together acr
 | Step | Where | What happens |
 |---|---|---|
 | 1 | `Service/Method/Elepay.php` `apply()` | Sets the order to PENDING, runs `purchaseFlow->prepare`, then forwards to `elepay_checkout` within the same request. |
-| 2 | `Controller/ElepayController.php` `checkout()` (`/elepay_checkout`) | Accepts only a PENDING order of the current cart. Zero-amount orders skip elepay and are settled directly. Otherwise creates the elepay code (`ElepayHelper::createCodeObject`) and redirects to its `codeUrl`. |
+| 2 | `Controller/ElepayController.php` `checkout()` (`/elepay_checkout`) | Accepts only a PENDING order of the current cart. Zero-amount orders skip elepay and are settled directly. Otherwise creates the elepay code (`ElepayHelper::createCodeObject`) and redirects to its `codeUrl`, which must be `https`. |
 | 3 | elepay | The customer pays and is sent back to `/elepay_checkout_validate`. |
 | 4 | `ElepayController::checkoutValidate()` (`/elepay_checkout_validate`) | Retrieves the charge from the elepay API using the returned `chargeId` / `codeId` (the query string is never trusted), validates it and either completes or rolls back the order. |
-| 5 | `ElepayController::elepayWebhook()` (`/elepay_paid_webhook`, POST) | Server-to-server notification that settles the order independently of the customer's browser. Returns 200 on success or when the order is already settled, 400 otherwise. |
+| 5 | `ElepayController::elepayWebhook()` (`/elepay_paid_webhook`, POST) | Server-to-server notification that settles the order independently of the customer's browser. The body is unsigned, so only its charge id is used: the charge is always retrieved from the elepay API and must carry the order's number before anything else is decided. Returns 200 on success or when the order is already settled, 400 otherwise (including when the charge cannot be retrieved), so the response does not reveal an order's status to a caller without a real charge. |
 
 `checkout()` of the payment method class always returns a failed `PaymentResult`: `apply()` leaves the purchase flow by forwarding, so it is never reached in normal operation.
 
 The Webhook URL to register on the elepay side is shown on the plugin's admin configuration page.
+
+`ElepayController::adminRedirect()` (`/%eccube_admin_route%/elepay/charge_redirect`), linked from the admin order list, calls the elepay API with the shop's secret key and redirects to the charge on the elepay dashboard. It must stay under the admin route so that the admin firewall (login, IP restriction, two-factor authentication) applies.
+
+Every elepay API call and the payment method list go through one Guzzle client with connect / response timeouts (`ElepayHelper::HTTP_CONNECT_TIMEOUT` / `HTTP_TIMEOUT`).
 
 ## Order status transitions
 
@@ -27,6 +31,7 @@ PROCESSING --(charge captured later)--> PAID (stock/points reserved again)
 - Settlement (`ElepayController::settleOrder`) commits the purchase flow, marks the order paid and sends the order mail. A failure in the settlement marks the request transaction rollback-only, so that only the status change is never committed on its own. A mail failure is only logged, unless the transaction is already rollback-only.
 - A payment that is captured after the customer cancelled is still accepted. If stock cannot be reserved again, an error is logged for the shop and the payment is kept.
 - Any status other than PENDING / PROCESSING counts as settled, including statuses the shop set later on the admin screen.
+- The elepay order number carries a time suffix (`ElepayHelper::getOrderNo`), so one order can receive more than one charge. A captured charge for an already settled order that differs from the stored `elepay_charge_id` is logged as an error so the shop can refund it; it is not refunded automatically.
 
 ## Concurrency
 
@@ -70,9 +75,13 @@ WHERE NOT EXISTS (SELECT 1 FROM dtb_payment p WHERE p.id = po.payment_id);
 
 ## URLs
 
-Generate every URL with the router (`generateUrl` / Twig `path()` / `url()`), never by concatenating `Request::getBasePath()` or a root-relative path, so that installations in a sub-directory (as on the EC-CUBE store verification environments) work. `ElepayHelper::addQuery()` does not encode values and is only for appending `mode` / `locale` to elepay's `codeUrl`.
+Generate every URL with the router (`generateUrl` / Twig `path()` / `url()`), never by concatenating `Request::getBasePath()` or a root-relative path, so that installations in a sub-directory (as on the EC-CUBE store verification environments) work. `ElepayHelper::addQuery()` URL-encodes the keys and values it appends, replaces parameters of the same name and keeps the rest of the existing query string as is.
 
 Behind a reverse proxy, absolute URLs fall back to `http://` unless EC-CUBE's `TRUSTED_PROXIES` / `force_ssl` are configured; that is a host-side setting.
+
+## Admin configuration
+
+The secret key is never rendered back on the configuration page. The field is an unmapped password input; an empty submission keeps the stored key, and the key is required only while none is stored. It is still stored in plain text in `plg_elepay_config`.
 
 ## Bundled SDK
 
