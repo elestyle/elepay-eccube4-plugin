@@ -18,6 +18,7 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Eccube\Controller\AbstractController;
 use Eccube\Entity\Order;
 use Eccube\Entity\Master\OrderStatus;
@@ -128,8 +129,13 @@ class ElepayController extends AbstractController
 
         try {
             $paymentObject = $this->elepayHelper->createCodeObject($order, $checkoutValidateUrl, $codeMetadata);
+            $codeUrl = $paymentObject['codeUrl'] ?? null;
+            if (!$this->elepayHelper->isHttpsUrl($codeUrl)) {
+                $this->logger->error('[注文処理] elepay の決済画面の URL が https ではありません.', [$order->getOrderNo()]);
+                return $this->redirectToRoute('shopping_error');
+            }
             $redirectUrl = $this->elepayHelper->addQuery(
-                $paymentObject['codeUrl'],
+                $codeUrl,
                 [
                     'mode' => 'auto',
                     'locale' => $request->getLocale()
@@ -246,24 +252,29 @@ class ElepayController extends AbstractController
     {
         $this->logger->info('*****  Elepay Webhook start.  ***** ');
 
-        $json = $request->getContent();
-        $data = json_decode($json, true);
-        $orderNo = $this->elepayHelper->parseOrderNo($data['data']['object']['orderNo']);
-        $chargeId = $data['data']['object']['id'];
+        // 本文は誰でも送れるため、決済 ID 以外は信用しない. 受注の状態は elepay の API から取り直した決済で判断し、
+        // 決済を確認できない要求には受注の状態にかかわらず同じエラーを返す（受注が入金済みかを判別させない）
+        $data = json_decode($request->getContent(), true);
+        $object = is_array($data) ? ($data['data']['object'] ?? null) : null;
+        $orderNo = is_array($object) && is_string($object['orderNo'] ?? null) ? $this->elepayHelper->parseOrderNo($object['orderNo']) : '';
+        $chargeId = is_array($object) && is_string($object['id'] ?? null) ? $object['id'] : '';
 
         $this->logger->info('[注文確認] Order No :', [$orderNo]);
 
-        /** @var Order $order */
-        $order = $this->elepayHelper->getOrderByNo($orderNo);
+        /** @var Order|null $order */
+        $order = ($orderNo !== '' && $chargeId !== '') ? $this->elepayHelper->getOrderByNo($orderNo) : null;
+        $chargeObject = null;
 
         if (empty($order)) {
             $this->logger->error('[注文確認] 購入処理中の受注が存在しません.');
             $result = 'error';
-        } else if ($this->isOrderSettled($order)) {
-            $result = 'already_paid';
         } else {
-            $chargeObject = $this->elepayHelper->getChargeObject($chargeId);
-            $result = $this->orderValidate($order, $chargeObject);
+            try {
+                $chargeObject = $this->elepayHelper->getChargeObject($chargeId);
+            } catch (ApiException | InvalidArgumentException $e) {
+                $this->logger->error('[注文確認] Exception when calling ChargeApi->retrieveCharge::' . $e->getMessage(), [$order->getOrderNo()]);
+            }
+            $result = is_array($chargeObject) ? $this->orderValidate($order, $chargeObject) : 'error';
         }
 
         if ($result === 'already_paid') {
@@ -282,22 +293,35 @@ class ElepayController extends AbstractController
     }
 
     /**
-     * Refund Validate
+     * 管理画面の受注一覧から、elepay 管理画面の決済詳細へ遷移する.
      *
-     * @Route("/elepay_admin_redirect", name="elepay_refund_validate")
+     * 店舗の秘密鍵で elepay の API を呼ぶため、管理画面のファイアウォール（管理者の認証・IP 制限・2 段階認証）の
+     * 内側に置く. 管理画面の URL 配下にないと匿名で到達できてしまう
+     *
+     * @Route("/%eccube_admin_route%/elepay/charge_redirect", name="elepay_refund_validate")
      *
      * @param Request $request
      *
      * @return RedirectResponse
-     * @throws Exception
      */
-    #[Route('/elepay_admin_redirect', name: 'elepay_refund_validate')]
+    #[Route('/%eccube_admin_route%/elepay/charge_redirect', name: 'elepay_refund_validate')]
     public function adminRedirect(Request $request): RedirectResponse
     {
         $chargeId = $request->query->get('chargeId');
-        $chargeObject = $this->elepayHelper->getChargeObject($chargeId);
+        $chargeObject = null;
+        if (is_string($chargeId) && $chargeId !== '') {
+            try {
+                $chargeObject = $this->elepayHelper->getChargeObject($chargeId);
+            } catch (ApiException | InvalidArgumentException $e) {
+                $this->logger->error('[管理画面] Exception when calling ChargeApi->retrieveCharge::' . $e->getMessage(), [$chargeId]);
+            }
+        }
+        if (!is_array($chargeObject) || !is_string($chargeObject['appId'] ?? null) || $chargeObject['appId'] === '') {
+            throw new NotFoundHttpException();
+        }
+
         $redirectUrl = $this->eccubeConfig->get('elepay.admin_host') .
-            '/apps/' . $chargeObject['appId'] . '/gw/payment/charges/' . $chargeId;
+            '/apps/' . rawurlencode($chargeObject['appId']) . '/gw/payment/charges/' . rawurlencode($chargeId);
         return $this->redirect($redirectUrl);
     }
 
@@ -422,15 +446,17 @@ class ElepayController extends AbstractController
      */
     private function orderValidate(Order $order, array $chargeObject): string
     {
-        if ($this->isOrderSettled($order)) {
-            return 'already_paid';
-        }
-
+        // 確定済みかどうかを答える前に、決済がこの受注のものであることを確かめる
         $orderNo = $order->getOrderNo();
-        $chargeOrderNo = $this->elepayHelper->parseOrderNo($chargeObject['orderNo']);
+        $chargeOrderNo = $this->elepayHelper->parseOrderNo((string)($chargeObject['orderNo'] ?? ''));
         if ($orderNo != $chargeOrderNo) {
             $this->logger->error('[注文確認] ERROR::Verify payment order error.' . PHP_EOL . '  ec[order_no] : ' . $orderNo . ' / elepay[order_no] : ' . $chargeOrderNo);
             return 'error';
+        }
+
+        if ($this->isOrderSettled($order)) {
+            $this->warnIfDuplicateCharge($order, $chargeObject);
+            return 'already_paid';
         }
 
         $orderAmount = $order->getPaymentTotal();
@@ -475,6 +501,28 @@ class ElepayController extends AbstractController
         $this->settleOrder($order, $paymentMethodName, $chargeObject['id'], $revived);
 
         return 'success';
+    }
+
+    /**
+     * 受注番号に時刻を付けて決済コードを作るため、1 つの受注に複数の決済が成立し得る.
+     * 確定済みの受注に、確定に使った決済とは別の決済が届いた場合は、返金の要否をショップが判断できるよう記録する
+     *
+     * @param Order $order
+     * @param array $chargeObject
+     */
+    private function warnIfDuplicateCharge(Order $order, array $chargeObject): void
+    {
+        $chargeId = $chargeObject['id'] ?? null;
+        $settledChargeId = $order->getElepayChargeId();
+        // 決済 ID の無い確定済み受注（決済不要の受注・旧版で確定した受注）とは比べられないため対象外
+        if (($chargeObject['status'] ?? null) !== 'captured' || empty($chargeId) || empty($settledChargeId) || $chargeId === $settledChargeId) {
+            return;
+        }
+        $this->logger->error('[注文確認] 確定済みの受注に別の決済が届きました. 二重の支払いのため返金の要否を確認してください.', [
+            $order->getOrderNo(),
+            'settled_charge_id' => $settledChargeId,
+            'charge_id' => $chargeId,
+        ]);
     }
 
     /**

@@ -35,6 +35,16 @@ use Plugin\elepay42\Repository\ConfigRepository;
 class ElepayHelper
 {
     /**
+     * 外部 HTTP 要求の接続の上限（秒）
+     */
+    private const HTTP_CONNECT_TIMEOUT = 5;
+
+    /**
+     * 外部 HTTP 要求の応答の上限（秒）
+     */
+    private const HTTP_TIMEOUT = 20;
+
+    /**
      * @var OrderRepository
      */
     protected $orderRepository;
@@ -130,7 +140,11 @@ class ElepayHelper
         $this->cartService = $cartService;
         $this->mailService = $mailService;
         $this->eccubeConfig = $eccubeConfig;
-        $this->httpClient = new Client();
+        // 外部の応答待ちで購入手続き画面・管理画面の表示が止まらないよう、接続と応答に上限を設ける
+        $this->httpClient = new Client([
+            'connect_timeout' => self::HTTP_CONNECT_TIMEOUT,
+            'timeout' => self::HTTP_TIMEOUT,
+        ]);
 
         $secretKey = $this->config->getSecretKey();
         $elepayApiHost = $this->eccubeConfig->get('elepay.api_host');
@@ -140,9 +154,9 @@ class ElepayHelper
             ->setPassword('')
             ->setHost($elepayApiHost);
 
-        $this->codeApi = new CodeApi(null, $config);
-        $this->chargeApi = new ChargeApi(null, $config);
-        $this->codeSettingApi = new CodeSettingApi(null, $config);
+        $this->codeApi = new CodeApi($this->httpClient, $config);
+        $this->chargeApi = new ChargeApi($this->httpClient, $config);
+        $this->codeSettingApi = new CodeSettingApi($this->httpClient, $config);
     }
 
     /**
@@ -153,6 +167,10 @@ class ElepayHelper
     public function getCartOrder()
     {
         $preOrderId = $this->cartService->getPreOrderId();
+        // カートが無い場合に pre_order_id IS NULL の受注（管理画面で登録した受注など）を引かない
+        if (empty($preOrderId)) {
+            return null;
+        }
 
         return $this->orderRepository->findOneBy([
             'pre_order_id' => $preOrderId,
@@ -420,12 +438,15 @@ class ElepayHelper
              *   ...
              * ]
              */
-            $availablePaymentMethods = json_decode($json, true)['paymentMethods'];
+            $availablePaymentMethods = json_decode($json, true)['paymentMethods'] ?? null;
+            if (!is_array($paymentMethodMap) || !is_array($availablePaymentMethods)) {
+                return [];
+            }
 
             $paymentMethods = [];
             foreach ($availablePaymentMethods as $item) {
-                $key = $item['paymentMethod'];
-                $paymentMethodInfo = $paymentMethodMap[$key];
+                $key = $item['paymentMethod'] ?? null;
+                $paymentMethodInfo = $paymentMethodMap[$key] ?? null;
 
                 if (
                     empty($key) ||
@@ -435,9 +456,10 @@ class ElepayHelper
                 ) continue;
 
                 if ($key === 'creditcard') {
-                    foreach ($item['brand'] as $brand) {
+                    foreach (($item['brand'] ?? []) as $brand) {
                         $key = 'creditcard_' . $brand;
-                        $paymentMethodInfo = $paymentMethodMap[$key];
+                        $paymentMethodInfo = $paymentMethodMap[$key] ?? null;
+                        if (empty($paymentMethodInfo)) continue;
                         $paymentMethods []= $this->getPaymentMethodInfo($key, $paymentMethodInfo, $item);
                     }
                 } else {
@@ -455,41 +477,71 @@ class ElepayHelper
 
     private function getPaymentMethodInfo ($key, $paymentMethodInfo, $metaData)
     {
+        $image = $paymentMethodInfo['image']['short'] ?? null;
+
         return [
             'key' => $key,
-            'name' => $paymentMethodInfo['name']['ja'],
-            'image' => $paymentMethodInfo['image']['short'],
+            'name' => (string)($paymentMethodInfo['name']['ja'] ?? $key),
+            // 外部 JSON 由来のため、https 以外の URL（javascript: 等）は画面に出さない
+            'image' => $this->isHttpsUrl($image) ? $image : null,
             'min' => null,
             'max' => null,
             'ua' => empty($metaData['ua']) ? '' : $metaData['ua']
         ];
     }
 
-    public function addQuery($url, $params)
+    /**
+     * URL が https で、ホストを持つか
+     *
+     * @param mixed $url
+     * @return bool
+     */
+    public function isHttpsUrl($url): bool
     {
-        foreach ($params as $key => $value) {
-            $url = $this->addQueryArg($url, $key, $value);
+        if (!is_string($url) || $url === '') {
+            return false;
         }
-
-        return $url;
+        $parts = parse_url($url);
+        return is_array($parts)
+            && strtolower($parts['scheme'] ?? '') === 'https'
+            && !empty($parts['host']);
     }
 
-    public function addQueryArg($url, $key, $value)
+    /**
+     * URL にクエリパラメータを追加する. 同名のパラメータは置き換え、キーと値は URL エンコードする.
+     * 既存のクエリは解析し直さずにそのまま残す
+     *
+     * @param string $url
+     * @param array $params
+     * @return string
+     */
+    public function addQuery($url, $params)
     {
-        $url = preg_replace('/(&)(#038;)?/', '$1', $url);
-        preg_match('/(.*)([?&])' . $key . '=[^&]+?(&)(.*)/i', $url . '&', $match);
-        if (!empty($match)) {
-            $url = $match[1] . $match[2] . $key . '=' . $value . '&' . $match[4];
-            $url = substr($url, 0, -1);
-        } elseif (strstr($url, '?')) {
-            if (preg_match('/(\?|&)$/', $url)) {
-                $url .= $key . '=' . $value;
-            } else {
-                $url .= '&' . $key . '=' . $value;
-            }
-        } else {
-            $url .= '?' . $key . '=' . $value;
+        $fragment = '';
+        $hashPos = strpos($url, '#');
+        if ($hashPos !== false) {
+            $fragment = substr($url, $hashPos);
+            $url = substr($url, 0, $hashPos);
         }
-        return $url;
+
+        $query = '';
+        $queryPos = strpos($url, '?');
+        if ($queryPos !== false) {
+            $query = substr($url, $queryPos + 1);
+            $url = substr($url, 0, $queryPos);
+        }
+
+        $pairs = [];
+        foreach (explode('&', $query) as $pair) {
+            if ($pair === '') continue;
+            $name = urldecode(explode('=', $pair, 2)[0]);
+            if (array_key_exists($name, $params)) continue;
+            $pairs[] = $pair;
+        }
+        foreach ($params as $key => $value) {
+            $pairs[] = rawurlencode((string)$key) . '=' . rawurlencode((string)$value);
+        }
+
+        return $url . '?' . implode('&', $pairs) . $fragment;
     }
 }

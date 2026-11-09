@@ -3,8 +3,11 @@
 namespace Plugin\elepay42\Form\Type\Admin;
 
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\PasswordType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\Form\FormEvent;
+use Symfony\Component\Form\FormEvents;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints as Assert;
 use Eccube\Common\EccubeConfig;
@@ -50,14 +53,32 @@ class ConfigType extends AbstractType
                 ],
             ])
 
-            ->add('secret_key', TextType::class, [
-                'required' => true,
-                'constraints' => [
-                    new Assert\NotBlank(null, trans('elepay.admin.config.from.validation.secret_key')),
+            // シークレットキーは画面に再表示しない. 入力されたときだけ保存し、空なら設定済みの値を残す（Controller）
+            ->addEventListener(FormEvents::PRE_SET_DATA, function (FormEvent $event) {
+                /** @var Config|null $config */
+                $config = $event->getData();
+                $configured = $config !== null && (string)$config->getSecretKey() !== '';
+
+                $constraints = [
                     new Assert\Length(null, null, $this->eccubeConfig['eccube_smtext_len']),
                     new Assert\Regex('/^[[:graph:]]+$/', 'form_error.graph_only'),
-                ],
-            ])
+                ];
+                if (!$configured) {
+                    array_unshift($constraints, new Assert\NotBlank(null, trans('elepay.admin.config.from.validation.secret_key')));
+                }
+
+                $event->getForm()->add('secret_key', PasswordType::class, [
+                    'mapped' => false,
+                    'required' => !$configured,
+                    'always_empty' => true,
+                    'constraints' => $constraints,
+                    'attr' => [
+                        // ブラウザが管理者のログインパスワードを自動入力して上書きしないようにする
+                        'autocomplete' => 'new-password',
+                        'placeholder' => $configured ? trans('elepay.admin.config.from.secret_key_placeholder') : '',
+                    ],
+                ]);
+            })
         ;
     }
 

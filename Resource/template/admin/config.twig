@@ -54,7 +54,7 @@
                             <div class="col">
                                 <div class="input-group">
                                     <input id="paid_webhook_url" type="text" class="form-control" value="{{ url('elepay_paid_webhook') }}" readonly>
-                                    <button class="btn btn-outline-secondary ec-elepay-copy-btn" type="button" data-clipboard-target="#paid_webhook_url">{{ 'elepay.admin.config.copy'|trans }}</button>
+                                    <button class="btn btn-outline-secondary ec-elepay-copy-btn" type="button" data-copy-target="#paid_webhook_url">{{ 'elepay.admin.config.copy'|trans }}</button>
                                 </div>
                             </div>
                         </div>
@@ -91,23 +91,35 @@
 {% endblock %}
 
 {% block javascript %}
-<script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script>
 <script>
-var clipboard=new ClipboardJS('.ec-elepay-copy-btn');
-clipboard.on('success',function(e){
-    e.clearSelection();
-    // console.info('Action:',e.action);
-    // console.info('Text:',e.text);
-    // console.info('Trigger:',e.trigger);
-    showTooltip(e.trigger,'Copied!');
-});
-clipboard.on('error',function(e){
-    // console.error('Action:',e.action);
-    // console.error('Trigger:',e.trigger);
-    showTooltip(e.trigger,fallbackMessage(e.action));
-});
+// 第三者 CDN のスクリプトを管理画面で読み込まないよう、ブラウザ標準の機能でコピーする
+function copyInputValue(input){
+    if(navigator.clipboard && window.isSecureContext){
+        return navigator.clipboard.writeText(input.value);
+    }
+    return new Promise(function(resolve,reject){
+        input.focus();
+        input.select();
+        try{
+            document.execCommand('copy') ? resolve() : reject();
+        }catch(err){
+            reject(err);
+        }
+    });
+}
 var btns = document.querySelectorAll('.ec-elepay-copy-btn');
 for (var i=0; i<btns.length; i++) {
+    btns[i].addEventListener('click',function(e){
+        var btn=e.currentTarget;
+        var input=document.querySelector(btn.getAttribute('data-copy-target'));
+        if(!input) return;
+        copyInputValue(input).then(function(){
+            if(window.getSelection) window.getSelection().removeAllRanges();
+            showTooltip(btn,'Copied!');
+        },function(){
+            showTooltip(btn,fallbackMessage('copy'));
+        });
+    });
     btns[i].addEventListener('mouseleave',clearTooltip);
     btns[i].addEventListener('blur',clearTooltip);
 }

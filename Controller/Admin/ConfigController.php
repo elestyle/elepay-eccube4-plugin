@@ -48,6 +48,12 @@ class ConfigController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $config = $form->getData();
 
+            // シークレットキーは入力されたときだけ更新する（空欄は「変更しない」）
+            $secretKey = (string)$form->get('secret_key')->getData();
+            if ($secretKey !== '') {
+                $config->setSecretKey($secretKey);
+            }
+
             $this->entityManager->persist($config);
             $this->entityManager->flush();
 
