@@ -1,7 +1,7 @@
 <script>
 $(function () {
     var elepayIdMap = JSON.parse('{{ elepay_id_map|json_encode|e('js') }}');
-    // ルーターでパスを生成する. サブディレクトリ設置時のベースパスもここで解決される
+    // Generate the path with the router. This also resolves the base path when the shop is installed in a subdirectory
     var elepayRedirectPath = '{{ path('elepay_refund_validate')|e('js') }}';
     var $table = $('#search_result');
     var $th = $table.find('thead th:last').prev();

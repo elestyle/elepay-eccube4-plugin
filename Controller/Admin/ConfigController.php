@@ -11,9 +11,9 @@ use Plugin\elepay42\Form\Type\Admin\ConfigType;
 use Plugin\elepay42\Repository\ConfigRepository;
 
 /**
- * ルートは docblock アノテーション（EC-CUBE 4.2/4.3 が読む）と PHP Attribute（4.4 と PHP 8 上の 4.2/4.3 が読む）の二重定義。
- * PHP 8 上の 4.2/4.3 は両方を読み、後から読んだ方で上書きするため、両者の内容は常に一致させること。
- * PHP 7.4 で Attribute を行コメントとして読み飛ばさせるため、Attribute は必ず 1 行で書くこと。
+ * Routes are declared twice: as docblock annotations (read by EC-CUBE 4.2/4.3) and as PHP attributes (read by 4.4, and by 4.2/4.3 on PHP 8).
+ * 4.2/4.3 on PHP 8 read both, and the one read later overrides the other, so always keep the two identical.
+ * Always write each attribute on a single line, so that PHP 7.4 skips it as a line comment.
  */
 class ConfigController extends AbstractController
 {
@@ -48,7 +48,7 @@ class ConfigController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $config = $form->getData();
 
-            // シークレットキーは入力されたときだけ更新する（空欄は「変更しない」）
+            // Update the secret key only when one is entered (blank means "keep the current key")
             $secretKey = (string)$form->get('secret_key')->getData();
             if ($secretKey !== '') {
                 $config->setSecretKey($secretKey);

@@ -42,8 +42,8 @@ class ConfigType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
         $builder
-            // 制約は位置引数で渡す. 配列オプションは Symfony 7.3 以降で非推奨、
-            // 名前付き引数は PHP 7.4（EC-CUBE 4.2）で使えないため
+            // Pass constraint options as positional arguments: array options are deprecated since Symfony 7.3,
+            // and named arguments are not available on PHP 7.4 (EC-CUBE 4.2)
             ->add('public_key', TextType::class, [
                 'required' => true,
                 'constraints' => [
@@ -53,7 +53,7 @@ class ConfigType extends AbstractType
                 ],
             ])
 
-            // シークレットキーは画面に再表示しない. 入力されたときだけ保存し、空なら設定済みの値を残す（Controller）
+            // Never show the secret key again. It is saved only when entered; when left blank, the stored value is kept (see the controller)
             ->addEventListener(FormEvents::PRE_SET_DATA, function (FormEvent $event) {
                 /** @var Config|null $config */
                 $config = $event->getData();
@@ -73,7 +73,7 @@ class ConfigType extends AbstractType
                     'always_empty' => true,
                     'constraints' => $constraints,
                     'attr' => [
-                        // ブラウザが管理者のログインパスワードを自動入力して上書きしないようにする
+                        // Keep the browser from overwriting this field by autofilling the admin's login password
                         'autocomplete' => 'new-password',
                         'placeholder' => $configured ? trans('elepay.admin.config.from.secret_key_placeholder') : '',
                     ],

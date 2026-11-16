@@ -59,7 +59,7 @@ For the owner, `orderComplete()` clears the cart, removes the ownership key and 
 - `enable()` registers the default configuration, the payment method and the `/elepay_paid` page. It runs on every enable, so it must not overwrite fields the shop edits on the admin screen (`method`, `charge`, `sort_no`); only `visible` is managed by enable/disable.
 - `enable()` binds the payment method to all existing delivery methods (`dtb_payment_option`).
 - `update()` registers pages added by newer versions (skipped when they exist). It is otherwise empty.
-- `uninstall()` hides the `Payment` row (kept, because past orders refer to it), removes its `PaymentOption` rows and removes the plugin's pages. Dropping the delivery bindings is what allows the remaining "QRコード決済" record to be deleted on the admin screen.
+- `uninstall()` hides the `Payment` row (kept, because past orders refer to it), removes its `PaymentOption` rows and removes the plugin's pages. Dropping the delivery bindings is what allows the remaining "QRコード決済" (QR code payment) record to be deleted on the admin screen.
 
 EC-CUBE's payment deletion does not cascade to `dtb_payment_option`; it relies on the foreign key on `payment_id` to reject the deletion. On an installation lacking that foreign key, deleting a payment method leaves rows pointing at a missing payment and the purchase screen fails with an `EntityNotFoundException`. The plugin deliberately does not clean these rows on enable: once the `dtb_payment` row is gone, rows of this plugin cannot be told apart from others, so any automatic cleanup could delete other payment methods' bindings. Handle it in support by finding the rows, deleting them and restoring the foreign key:
 

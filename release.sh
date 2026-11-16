@@ -1,22 +1,22 @@
 #!/bin/bash
 #
-# elepay 決済プラグインのリリース用パッケージ(tar.gz)を作成するスクリプト。
+# Builds the release package (tar.gz) of the elepay payment plugin.
 #
-# EC-CUBE プラグイン仕様に準拠:
+# Follows the EC-CUBE plugin spec:
 #   https://doc4.ec-cube.net/plugin_spec
-#   - 配布形式は tar.gz(仕様の推奨形式)
-#   - プラグインのファイルはアーカイブのルートに直接配置する(フォルダごと圧縮しない)
-#   - composer.json は必須
-#   - .git / .DS_Store / .gitignore / macOS のリソースフォーク(._*, __MACOSX)は含めない
+#   - Distributed as tar.gz (the format the spec recommends)
+#   - Plugin files sit directly at the archive root (the folder itself is not archived)
+#   - composer.json is required
+#   - .git / .DS_Store / .gitignore / macOS resource forks (._*, __MACOSX) are not included
 #
 set -euo pipefail
 
-# スクリプトのあるディレクトリで実行する(どこから呼んでも同じ結果にする)
+# Run in the script's directory (same result wherever it is called from)
 cd "$(dirname "$0")"
 
-# --- パッケージに含めるプラグインの構成要素 -------------------------------
-# 機能に必要なディレクトリ/ファイルのみを明示的に列挙する。
-# (.idea, docs, README, 過去の zip など配布に不要なものは含めない。LICENSE は MIT の条件により同梱する)
+# --- Plugin components included in the package ----------------------------
+# List explicitly only the directories/files the plugin needs.
+# (.idea, docs, README, old zips etc. are not needed for distribution. LICENSE is shipped as the MIT terms require)
 INCLUDE=(
   Controller
   Entity
@@ -31,8 +31,8 @@ INCLUDE=(
   LICENSE
 )
 
-# --- パッケージから除外するファイルパターン --------------------------------
-# 仕様で除外が必須の .git / .DS_Store に加え、.gitignore も除外する。
+# --- File patterns excluded from the package ------------------------------
+# Besides .git / .DS_Store, which the spec requires to be excluded, also exclude .gitignore.
 EXCLUDE=(
   --exclude='.git'
   --exclude='*/.git'
@@ -40,11 +40,11 @@ EXCLUDE=(
   --exclude='.gitignore'
 )
 
-# --- 出力ファイル名(composer.json の version を付与) ----------------------
+# --- Output file name (with the version from composer.json) ---------------
 VERSION="$(jq -r '.version // empty' composer.json 2>/dev/null || true)"
 ARCHIVE="elepay-eccube4-plugin${VERSION:+-v${VERSION}}.tar.gz"
 
-# --- 必須ファイル/ディレクトリの存在チェック -------------------------------
+# --- Check that the required files/directories exist ----------------------
 for item in "${INCLUDE[@]}"; do
   if [ ! -e "$item" ]; then
     echo "エラー: '$item' が見つかりません。パッケージを作成できません。" >&2
@@ -52,12 +52,12 @@ for item in "${INCLUDE[@]}"; do
   fi
 done
 
-# --- 既存のアーカイブを削除してから作成 ------------------------------------
+# --- Delete the existing archive, then create it --------------------------
 rm -f "$ARCHIVE"
 
-# 仕様推奨の tar.gz 形式で作成する。
-#   COPYFILE_DISABLE=1 : macOS の AppleDouble(._*)をアーカイブに含めない
-#   -c 作成 / -z gzip / -v 一覧表示 / -f 出力ファイル
+# Create it in the tar.gz format the spec recommends.
+#   COPYFILE_DISABLE=1 : keep macOS AppleDouble files (._*) out of the archive
+#   -c create / -z gzip / -v list files / -f output file
 COPYFILE_DISABLE=1 tar "${EXCLUDE[@]}" -czvf "$ARCHIVE" "${INCLUDE[@]}"
 
 echo ""
@@ -65,7 +65,7 @@ echo "作成しました: $ARCHIVE"
 echo "  サイズ : $(du -h "$ARCHIVE" | cut -f1)"
 echo "  件数   : $(tar -tzf "$ARCHIVE" | grep -vc '/$') ファイル"
 
-# 念のため、除外すべきファイルが混入していないか検査する
+# As a safeguard, check that no excluded file slipped in
 if tar -tzf "$ARCHIVE" | grep -qiE 'DS_Store|\.gitignore|__MACOSX|/\._|(^|/)\.git(/|$)'; then
   echo "警告: 除外対象のファイルがパッケージに含まれています。" >&2
   tar -tzf "$ARCHIVE" | grep -iE 'DS_Store|\.gitignore|__MACOSX|/\._|(^|/)\.git(/|$)' >&2

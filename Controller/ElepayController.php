@@ -28,14 +28,14 @@ use Plugin\elepay42\Service\ElepayHelper;
 use Plugin\elepay42\Service\LoggerService;
 
 /**
- * ルートは docblock アノテーション（EC-CUBE 4.2/4.3 が読む）と PHP Attribute（4.4 と PHP 8 上の 4.2/4.3 が読む）の二重定義。
- * PHP 8 上の 4.2/4.3 は両方を読み、後から読んだ方で上書きするため、両者の内容は常に一致させること。
- * PHP 7.4 で Attribute を行コメントとして読み飛ばさせるため、Attribute は必ず 1 行で書くこと。
+ * Routes are declared twice: as docblock annotations (read by EC-CUBE 4.2/4.3) and as PHP attributes (read by 4.4, and by 4.2/4.3 on PHP 8).
+ * 4.2/4.3 on PHP 8 read both, and the one read later overrides the other, so always keep the two identical.
+ * Always write each attribute on a single line, so that PHP 7.4 skips it as a line comment.
  */
 class ElepayController extends AbstractController
 {
     /**
-     * 決済を開始したブラウザの受注 ID. elepay からの戻りを、その受注を決済したブラウザだけが完了させるために使う
+     * Order ID held by the browser that started the payment. Used so that only the browser that paid for the order completes it on the return from elepay
      */
     private const SESSION_CHECKOUT_ORDER_ID = 'elepay42.checkout.order_id';
 
@@ -78,7 +78,7 @@ class ElepayController extends AbstractController
     }
 
     /**
-     * elepay 決済画面を表示する.
+     * Shows the elepay payment page.
      *
      * @Route("/elepay_checkout", name="elepay_checkout")
      *
@@ -97,14 +97,14 @@ class ElepayController extends AbstractController
             return $this->redirectToRoute('shopping_error');
         }
 
-        // 直接アクセスされた場合に、PaymentMethod::apply() の在庫確保等を経ていない受注で決済を始めない
+        // On direct access, do not start a payment for an order that has not gone through PaymentMethod::apply() (stock reservation etc.)
         if ($order->getOrderStatus() === null || $order->getOrderStatus()->getId() !== OrderStatus::PENDING) {
             $this->logger->error('[注文確認] 決済処理中の受注ではありません.', [$order->getOrderNo()]);
             return $this->redirectToRoute('shopping_error');
         }
 
         if ($order->getPaymentTotal() == 0) {
-            // 決済不要のため elepay を経由せずに入金済みにする
+            // No payment is needed, so mark the order as PAID without going through elepay
             $this->settleOrder($order);
             $this->orderComplete($order);
 
@@ -113,7 +113,7 @@ class ElepayController extends AbstractController
 
         $this->requestStack->getSession()->set(self::SESSION_CHECKOUT_ORDER_ID, $order->getId());
 
-        // ルーターで絶対 URL を生成する. サブディレクトリ設置時のベースパスもここで解決される
+        // Generate absolute URLs with the router. This also resolves the base path when the shop is installed in a subdirectory
         $checkoutValidateUrl = $this->generateUrl(
             'elepay_checkout_validate',
             [
@@ -177,16 +177,16 @@ class ElepayController extends AbstractController
             return $this->redirectToRoute('shopping_error');
         }
 
-        // URL の受注番号は誰でも指定できるため、この受注の決済を開始したブラウザ以外には
-        // 完了画面の表示・受注のロールバックを行わない.
-        // 決済自体は elepay の API で検証するため、決済確定の処理だけはブラウザに関係なく行う
+        // Anyone can put an order number in the URL, so only the browser that started this order's payment
+        // gets the completion page or has the order rolled back.
+        // The payment itself is verified through the elepay API, so confirming the payment runs regardless of the browser
         $isOwner = $this->requestStack->getSession()->get(self::SESSION_CHECKOUT_ORDER_ID) === $order->getId();
 
         if ($this->isOrderSettled($order)) {
             if ($isOwner) {
                 return $this->redirectToComplete($order);
             }
-            // 決済を開始したブラウザ以外には、この戻りの決済が本当にこの受注のものであると確認できた場合だけ知らせる
+            // Tell a browser other than the one that started the payment only once this return's payment is confirmed to belong to this order
             $chargeObject = $status === 'captured' ? $this->fetchReturnedCharge($order, $chargeId, $codeId) : null;
             if ($chargeObject !== null && $this->chargeMatchesOrder($order, $chargeObject)) {
                 return $this->redirectToPaidNotice($order);
@@ -212,13 +212,13 @@ class ElepayController extends AbstractController
                 return $this->redirectToRoute('shopping_error');
             }
 
-            // 別端末での支払いと同時にキャンセルされた場合に、入金済みの受注を購入処理中へ戻さないよう、
-            // 決済処理中のときだけ購入処理中へ戻す
+            // Roll back to PROCESSING only while the order is PENDING, so that a PAID order is not rolled back
+            // when a cancel races with a payment made on another device
             if ($this->elepayHelper->transitionOrderStatus($order, [OrderStatus::PENDING], OrderStatus::PROCESSING)) {
                 $order->setOrderStatus($this->elepayHelper->getOrderStatusProcessing());
 
-                // purchaseFlow::rollbackを呼び出し, 購入処理をロールバックする.
-                // 在庫・ポイントの戻しはエンティティ上の変更のため、その後に flush して保存する
+                // Call purchaseFlow::rollback to roll back the purchase.
+                // Restoring stock and points only changes the entities, so flush afterwards to save them
                 $this->purchaseFlow->rollback($order, new PurchaseContext());
                 $this->entityManager->flush();
             } else {
@@ -240,7 +240,7 @@ class ElepayController extends AbstractController
     }
 
     /**
-     * Webhook 処理を行う
+     * Handles the webhook
      *
      * @Route("/elepay_paid_webhook", name="elepay_paid_webhook", methods={"POST"})
      *
@@ -252,8 +252,8 @@ class ElepayController extends AbstractController
     {
         $this->logger->info('*****  Elepay Webhook start.  ***** ');
 
-        // 本文は誰でも送れるため、決済 ID 以外は信用しない. 受注の状態は elepay の API から取り直した決済で判断し、
-        // 決済を確認できない要求には受注の状態にかかわらず同じエラーを返す（受注が入金済みかを判別させない）
+        // Anyone can send the body, so trust nothing in it but the charge ID. Decide on the order from the charge fetched again from the elepay API,
+        // and answer every request whose charge cannot be verified with the same error whatever the order's status (so it cannot reveal whether the order is paid)
         $data = json_decode($request->getContent(), true);
         $object = is_array($data) ? ($data['data']['object'] ?? null) : null;
         $orderNo = is_array($object) && is_string($object['orderNo'] ?? null) ? $this->elepayHelper->parseOrderNo($object['orderNo']) : '';
@@ -278,12 +278,12 @@ class ElepayController extends AbstractController
         }
 
         if ($result === 'already_paid') {
-            // 顧客の戻りや Webhook の再送で既に確定済みの受注は、完了処理を繰り返さずに成功を返して elepay の再送を止める.
-            // カートは確定させたリクエストが削除済みのため触らない
+            // For an order already settled by the customer's return or an earlier webhook delivery, return success without repeating the completion, so elepay stops retrying.
+            // The request that settled the order has already deleted the cart, so leave it alone
             $this->logger->info('[注文確認] 受注は既に確定済みです.', [$order->getOrderNo()]);
             $result = 'success';
         } else if ($result === 'success') {
-            // Webhook は顧客のセッションを持たないため、受注と同じ pre_order_id のカートを削除する
+            // A webhook has no customer session, so delete the cart with the same pre_order_id as the order
             $this->elepayHelper->removeCartByPreOrderId($order->getPreOrderId());
             $this->logger->info('[注文完了] 注文完了.');
         }
@@ -293,10 +293,10 @@ class ElepayController extends AbstractController
     }
 
     /**
-     * 管理画面の受注一覧から、elepay 管理画面の決済詳細へ遷移する.
+     * Redirects from the admin order list to the charge details on the elepay dashboard.
      *
-     * 店舗の秘密鍵で elepay の API を呼ぶため、管理画面のファイアウォール（管理者の認証・IP 制限・2 段階認証）の
-     * 内側に置く. 管理画面の URL 配下にないと匿名で到達できてしまう
+     * It calls the elepay API with the shop's secret key, so it sits inside the admin firewall (admin authentication, IP restriction,
+     * two-factor authentication). Outside the admin URL it would be reachable anonymously
      *
      * @Route("/%eccube_admin_route%/elepay/charge_redirect", name="elepay_refund_validate")
      *
@@ -326,7 +326,7 @@ class ElepayController extends AbstractController
     }
 
     /**
-     * 決済を開始したブラウザ以外へ elepay から戻った顧客に、決済が完了したことだけを伝える
+     * Tells a customer who returned from elepay to a browser other than the one that started the payment only that the payment is complete
      *
      * @Route("/elepay_paid", name="elepay_paid")
      *
@@ -339,7 +339,7 @@ class ElepayController extends AbstractController
     }
 
     /**
-     * elepay から戻った URL のパラメータで決済を取得する. 取得できない場合は null
+     * Fetches the charge using the parameters of the URL returned from elepay. null if it cannot be fetched
      *
      * @param Order $order
      * @param string|null $chargeId
@@ -373,7 +373,7 @@ class ElepayController extends AbstractController
     /**
      * @param Order $order
      * @param array $chargeObject
-     * @return bool 決済が確定済みで、この受注のものである場合 true
+     * @return bool true if the payment is settled and belongs to this order
      */
     private function chargeMatchesOrder(Order $order, array $chargeObject): bool
     {
@@ -382,7 +382,7 @@ class ElepayController extends AbstractController
     }
 
     /**
-     * 決済を開始したブラウザを購入完了画面へ遷移させる
+     * Sends the browser that started the payment to the purchase complete page
      *
      * @param Order $order
      * @return RedirectResponse
@@ -394,8 +394,8 @@ class ElepayController extends AbstractController
     }
 
     /**
-     * 決済アプリから別のブラウザへ戻った場合など、決済を開始したブラウザ以外に決済完了だけを伝える.
-     * 呼び出し側で、この受注の決済が確定済みであることを elepay の API で確認していること
+     * Tells a browser other than the one that started the payment (e.g. when the payment app returns to a different browser) only that the payment is complete.
+     * The caller must have verified through the elepay API that this order's payment is settled
      *
      * @param Order $order
      * @return RedirectResponse
@@ -403,13 +403,13 @@ class ElepayController extends AbstractController
     private function redirectToPaidNotice(Order $order): RedirectResponse
     {
         $this->logger->info('[注文確認] 決済を開始したブラウザではないため購入完了画面を表示しません.', [$order->getOrderNo()]);
-        // 決済を開始したブラウザのカートで再購入されないよう削除する
+        // Delete the cart of the browser that started the payment so that it is not purchased again
         $this->elepayHelper->removeCartByPreOrderId($order->getPreOrderId());
         return $this->redirectToRoute('elepay_paid');
     }
 
     /**
-     * 顧客のブラウザから来たリクエストで、購入完了画面へ遷移する前の後処理を行う
+     * For a request from the customer's browser, does the cleanup before moving to the purchase complete page
      *
      * @param Order $order
      */
@@ -419,14 +419,14 @@ class ElepayController extends AbstractController
         $this->elepayHelper->cartClear();
 
         $session = $this->requestStack->getSession();
-        // 完了後に戻り URL を再読み込みされても、その時点のカートを消さないよう決済中の印を外す
+        // Clear the in-payment marker so that reloading the return URL after completion does not delete the cart as it is then
         $session->remove(self::SESSION_CHECKOUT_ORDER_ID);
-        // 購入完了画面は SESSION_ORDER_ID を受注 ID として検索するため、受注番号ではなく ID を保存する
+        // The purchase complete page looks up SESSION_ORDER_ID as the order ID, so store the ID rather than the order number
         $session->set(OrderHelper::SESSION_ORDER_ID, $order->getId());
     }
 
     /**
-     * 決済による確定が済んだ受注か. 入金済みに加え、その後に管理画面で発送済み・キャンセル等へ進んだ受注も含む
+     * Whether the order has been settled by a payment. Besides PAID, this includes orders later moved on in the admin, e.g. to shipped or cancelled
      *
      * @param Order $order
      * @return bool
@@ -438,15 +438,15 @@ class ElepayController extends AbstractController
     }
 
     /**
-     * 受注と elepay の決済を照合し、一致すれば受注を入金済みにする
+     * Matches the order against the elepay charge and, if they match, marks the order as PAID
      *
      * @param Order $order
      * @param array $chargeObject
-     * @return string success: この呼び出しで入金済みにした / already_paid: 既に確定済み / error: 照合に失敗
+     * @return string success: marked as PAID by this call / already_paid: already settled / error: the match failed
      */
     private function orderValidate(Order $order, array $chargeObject): string
     {
-        // 確定済みかどうかを答える前に、決済がこの受注のものであることを確かめる
+        // Make sure the charge belongs to this order before telling whether the order is already settled
         $orderNo = $order->getOrderNo();
         $chargeOrderNo = $this->elepayHelper->parseOrderNo((string)($chargeObject['orderNo'] ?? ''));
         if ($orderNo != $chargeOrderNo) {
@@ -487,12 +487,12 @@ class ElepayController extends AbstractController
             }
         }
 
-        // Webhook と顧客の戻りが同時に来ると両方が未確定の受注を読むため、
-        // 確定処理（購入フローの確定・注文メール）を行うリクエストを DB 上で 1 つに絞る
+        // When the webhook and the customer's return arrive together, both read the unsettled order,
+        // so let the DB narrow the request that runs the settlement (committing the purchase flow, the order mail) down to one
         if ($this->elepayHelper->transitionOrderStatus($order, [OrderStatus::PENDING], OrderStatus::PAID)) {
             $revived = false;
         } else if ($this->elepayHelper->transitionOrderStatus($order, [OrderStatus::PROCESSING], OrderStatus::PAID)) {
-            // 決済中のキャンセルが先に処理され、在庫・ポイントが戻された後に決済が確定した. 支払いは受け付ける
+            // A cancel during payment was processed first, and the payment was captured after stock and points had been restored. Accept the payment
             $revived = true;
         } else {
             return 'already_paid';
@@ -504,8 +504,8 @@ class ElepayController extends AbstractController
     }
 
     /**
-     * 受注番号に時刻を付けて決済コードを作るため、1 つの受注に複数の決済が成立し得る.
-     * 確定済みの受注に、確定に使った決済とは別の決済が届いた場合は、返金の要否をショップが判断できるよう記録する
+     * Payment codes are created from the order number plus a timestamp, so one order can end up with several captured payments.
+     * When a settled order receives a payment other than the one that settled it, log it so that the shop can decide whether to refund
      *
      * @param Order $order
      * @param array $chargeObject
@@ -514,7 +514,7 @@ class ElepayController extends AbstractController
     {
         $chargeId = $chargeObject['id'] ?? null;
         $settledChargeId = $order->getElepayChargeId();
-        // 決済 ID の無い確定済み受注（決済不要の受注・旧版で確定した受注）とは比べられないため対象外
+        // Settled orders without a charge ID (orders needing no payment, orders settled by older versions) cannot be compared, so skip them
         if (($chargeObject['status'] ?? null) !== 'captured' || empty($chargeId) || empty($settledChargeId) || $chargeId === $settledChargeId) {
             return;
         }
@@ -526,12 +526,12 @@ class ElepayController extends AbstractController
     }
 
     /**
-     * 受注を入金済みとして確定し、注文メールを送信する
+     * Settles the order as PAID and sends the order mail
      *
      * @param Order $order
-     * @param string|null $paymentMethodName elepay 上の決済手段名. 決済を経由しない場合は null
+     * @param string|null $paymentMethodName Payment method name on elepay. null when no payment is involved
      * @param string|null $chargeId
-     * @param bool $revived キャンセルで購入処理中へ戻された受注を確定する場合 true
+     * @param bool $revived true when settling an order that a cancel rolled back to PROCESSING
      */
     private function settleOrder(Order $order, ?string $paymentMethodName = null, ?string $chargeId = null, bool $revived = false): void
     {
@@ -543,17 +543,17 @@ class ElepayController extends AbstractController
             }
             $this->markOrderPaid($order, $paymentMethodName, $chargeId);
         } catch (\Throwable $e) {
-            // EC-CUBE はリクエストのトランザクションを rollback-only の場合にしかロールバックしない.
-            // 入金済みへの遷移だけがコミットされ、確定処理の抜けた受注が残らないようにする
+            // EC-CUBE rolls back the request's transaction only when it is marked rollback-only.
+            // Make sure the transition to PAID is not committed on its own, leaving an order that missed the settlement steps
             if ($connection->isTransactionActive()) {
                 $connection->setRollbackOnly();
             }
             throw $e;
         }
 
-        // SMTP の失敗で決済の確定まで取り消さないよう、例外は記録するだけにする.
-        // ただしメール履歴の保存失敗などでトランザクションが rollback-only になった場合は確定もコミットされないため、
-        // 成功として応答しないよう例外をそのまま投げる
+        // Only log the exception, so that an SMTP failure does not undo the settlement of the payment.
+        // But when the transaction has become rollback-only (e.g. saving the mail history failed), the settlement is not committed either,
+        // so rethrow the exception instead of responding with success
         $this->logger->info('[注文処理] 注文メールの送信を行います.', [$order->getOrderNo()]);
         try {
             $this->elepayHelper->sendOrderMail($order);
@@ -566,8 +566,8 @@ class ElepayController extends AbstractController
     }
 
     /**
-     * キャンセルで戻された在庫・ポイント等を、購入フローの prepare で確保し直す.
-     * 在庫切れ等で確保できなくても支払いは受け付けるため、ショップが受注を確認できるよう警告を記録する
+     * Reserves again, through the purchase flow's prepare, the stock, points etc. that a cancel restored.
+     * The payment is accepted even if they cannot be reserved (out of stock etc.), so log a warning for the shop to check the order
      *
      * @param Order $order
      */
@@ -582,15 +582,15 @@ class ElepayController extends AbstractController
     }
 
     /**
-     * 購入フローを確定させて受注を入金済みにする
+     * Commits the purchase flow and marks the order as PAID
      *
      * @param Order $order
-     * @param string|null $paymentMethodName elepay 上の決済手段名. 決済を経由しない場合は null
+     * @param string|null $paymentMethodName Payment method name on elepay. null when no payment is involved
      * @param string|null $chargeId
      */
     private function markOrderPaid(Order $order, ?string $paymentMethodName = null, ?string $chargeId = null): void
     {
-        // purchaseFlow::commitを呼び出し, 購入処理を完了させる.
+        // Call purchaseFlow::commit to complete the purchase.
         // The purpose of this operation is to set the order_date of the order,
         // but it also changes the order status to new,
         // so it must be executed before the order status changes

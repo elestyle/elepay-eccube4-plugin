@@ -8,10 +8,10 @@ use stdClass;
 
 /**
  * Config
- * プラグインのインストール時に、この定義から plg_elepay_config テーブルが作成される
+ * The plg_elepay_config table is created from this definition when the plugin is installed
  *
- * マッピングは docblock アノテーション（EC-CUBE 4.2/4.3 が読む）と PHP Attribute（4.4 が読む）の二重定義。
- * PHP 7.4 で Attribute を行コメントとして読み飛ばさせるため、Attribute は必ず 1 行で書くこと。
+ * Mappings are declared twice: as docblock annotations (read by EC-CUBE 4.2/4.3) and as PHP attributes (read by 4.4).
+ * Always write each attribute on a single line, so that PHP 7.4 skips it as a line comment.
  *
  * @ORM\Table(name="plg_elepay_config")
  * @ORM\Entity(repositoryClass="Plugin\elepay42\Repository\ConfigRepository")

@@ -27,7 +27,7 @@ It resolves the dependencies against PHP 7.4 regardless of the local PHP, append
 
 - [docs/architecture.md](docs/architecture.md): payment flow, order status handling, concurrency, ownership rule, plugin lifecycle
 - [docs/compatibility.md](docs/compatibility.md): EC-CUBE 4.2 / 4.3 / 4.4 compatibility rules
-- [docs/eccube-store.md](docs/eccube-store.md): 「戻り先URL」 for the EC-CUBE store (オーナーズストア)
+- [docs/eccube-store.md](docs/eccube-store.md): 「戻り先URL」 (return URL) for the EC-CUBE store (オーナーズストア, Owners Store)
 
 ### Directory description
 
