@@ -16,7 +16,7 @@ cd "$(dirname "$0")"
 
 # --- パッケージに含めるプラグインの構成要素 -------------------------------
 # 機能に必要なディレクトリ/ファイルのみを明示的に列挙する。
-# (.idea, docs, README, 過去の zip など配布に不要なものは含めない)
+# (.idea, docs, README, 過去の zip など配布に不要なものは含めない。LICENSE は MIT の条件により同梱する)
 INCLUDE=(
   Controller
   Entity
@@ -28,6 +28,7 @@ INCLUDE=(
   composer.json
   Event.php
   PluginManager.php
+  LICENSE
 )
 
 # --- パッケージから除外するファイルパターン --------------------------------
