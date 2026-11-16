@@ -1,7 +1,7 @@
 <div class="hidden">
     <div id="elepay_info">
         {% for item in payment_methods %}
-            {# 外部 JSON 由来の URL を CSS の url() に埋め込まず、src 属性として出力する #}
+            {# Output URLs that come from external JSON as a src attribute, instead of embedding them in CSS url() #}
             {% if item.image %}
                 <img class="elepay-payment-method-icon" src="{{ item.image }}" alt="{{ item.name }}" title="{{ item.name }}">
             {% endif %}

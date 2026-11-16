@@ -3,12 +3,12 @@
 namespace Plugin\elepay42\Util;
 
 /**
- * 決済モジュール用 汎用関数クラス
+ * General-purpose helpers for the payment module
  */
 class PluginUtil
 {
     /**
-     * コンストラクタ
+     * Constructor
      */
     public function __construct() {
     }
@@ -41,11 +41,11 @@ class PluginUtil
     }
 
     /**
-     * 現在日時までの経過日数を取得.
+     * Gets the number of days elapsed until now.
      *
      * @param  string   $from_date
      *
-     * @return integer  現在日時までの経過日数
+     * @return integer  Number of days elapsed until now
      */
     public function getDayDiff($from_date)
     {
@@ -66,11 +66,11 @@ class PluginUtil
     }
 
     /**
-     * 郵便番号文字列の間にハイフンを挿入.
+     * Inserts a hyphen into a postal code string.
      *
-     * @param  string  整形前の郵便番号(ddddddd)
+     * @param  string  Postal code before formatting (ddddddd)
      *
-     * @return string  整形後の郵便番号(ddd-dddd)
+     * @return string  Postal code after formatting (ddd-dddd)
      */
     public function convertPostalCode($postal_code)
     {

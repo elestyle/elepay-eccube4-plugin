@@ -92,7 +92,7 @@
 
 {% block javascript %}
 <script>
-// 第三者 CDN のスクリプトを管理画面で読み込まないよう、ブラウザ標準の機能でコピーする
+// Copy with the browser's built-in API, so that the admin page loads no third-party CDN script
 function copyInputValue(input){
     if(navigator.clipboard && window.isSecureContext){
         return navigator.clipboard.writeText(input.value);

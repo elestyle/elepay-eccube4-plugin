@@ -5,7 +5,7 @@ description: Full workflow and gotcha checklist for publishing a new version of 
 
 # elepay EC-CUBE Plugin Release Guide
 
-When a version is also submitted to the EC-CUBE store, the 「戻り先URL」 is described in `docs/eccube-store.md`.
+When a version is also submitted to the EC-CUBE store, the 「戻り先URL」 (return URL) is described in `docs/eccube-store.md`.
 
 Standard workflow to publish a new version of this plugin (repo `elestyle/elepay-eccube4-plugin`). Follow the steps in order; read the gotchas first.
 
@@ -66,7 +66,7 @@ elepay-eccube4-plugin for eccube 4.2/4.3/4.4
 
 - [<type>: <what changed, from the user's point of view>](https://github.com/elestyle/elepay-eccube4-plugin/commit/<full-sha>)
 
-<必要なら加盟店向けの補足を日本語で。挙動が変わる修正なら、加盟店側の対応が必要かどうかを明記する。>
+<Optional notes for merchants, written in Japanese. For a fix that changes behavior, state whether merchants need to do anything.>
 ```
 
 Then create the release. Note the tag has no `v` and the title has `v`:

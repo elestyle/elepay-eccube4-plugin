@@ -24,7 +24,7 @@ use Plugin\elepay42\Service\Method\Elepay;
 class PluginManager extends AbstractPluginManager
 {
     /**
-     * プラグインが追加するフロントのページ. file_name は管理画面のページ編集でテンプレートを読むために使われる
+     * Front pages added by the plugin. file_name is used by the admin page editor to load the template
      */
     private const PAGES = [
         ['url' => 'elepay_paid', 'name' => 'elepay決済完了', 'file_name' => '@elepay42/default/Shopping/paid'],
@@ -56,12 +56,12 @@ class PluginManager extends AbstractPluginManager
      */
     public function install(array $config, ContainerInterface $container): void
     {
-        // リソースファイルのコピー
+        // Copy the resource files
 //        $this->copyAssets();
     }
 
     /**
-     * 有効なままバージョンアップされた場合も、新しいバージョンで追加したページを登録する
+     * Also registers the pages added in a new version when the plugin is upgraded while enabled
      *
      * @param array $config
      * @param ContainerInterface $container
@@ -77,7 +77,7 @@ class PluginManager extends AbstractPluginManager
      */
     public function uninstall(array $config, ContainerInterface $container): void
     {
-        // リソースファイルの削除
+        // Remove the resource files
 //        $this->removeAssets();
         $this->removePaymentMethod($container);
         $this->removePage($container);
@@ -280,7 +280,7 @@ class PluginManager extends AbstractPluginManager
     }
 
     /**
-     * フロントのページとして登録する. 未登録のルートは下層ページのレイアウト（ヘッダー・フッター）が適用されないため
+     * Registers the pages as front pages, because unregistered routes do not get the sub-page layout (header and footer)
      *
      * @param ContainerInterface $container
      */

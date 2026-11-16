@@ -35,12 +35,12 @@ use Plugin\elepay42\Repository\ConfigRepository;
 class ElepayHelper
 {
     /**
-     * 外部 HTTP 要求の接続の上限（秒）
+     * Connect timeout of outgoing HTTP requests (seconds)
      */
     private const HTTP_CONNECT_TIMEOUT = 5;
 
     /**
-     * 外部 HTTP 要求の応答の上限（秒）
+     * Response timeout of outgoing HTTP requests (seconds)
      */
     private const HTTP_TIMEOUT = 20;
 
@@ -140,7 +140,7 @@ class ElepayHelper
         $this->cartService = $cartService;
         $this->mailService = $mailService;
         $this->eccubeConfig = $eccubeConfig;
-        // 外部の応答待ちで購入手続き画面・管理画面の表示が止まらないよう、接続と応答に上限を設ける
+        // Limit the connect and response time, so that waiting on an external service does not hang the checkout or admin pages
         $this->httpClient = new Client([
             'connect_timeout' => self::HTTP_CONNECT_TIMEOUT,
             'timeout' => self::HTTP_TIMEOUT,
@@ -160,14 +160,14 @@ class ElepayHelper
     }
 
     /**
-     * 決済処理中の受注を取得する.
+     * Gets the order of the current cart whose payment is in progress.
      *
      * @return null|object
      */
     public function getCartOrder()
     {
         $preOrderId = $this->cartService->getPreOrderId();
-        // カートが無い場合に pre_order_id IS NULL の受注（管理画面で登録した受注など）を引かない
+        // Without a cart, do not pick up an order with pre_order_id IS NULL (e.g. an order registered in the admin)
         if (empty($preOrderId)) {
             return null;
         }
@@ -178,7 +178,7 @@ class ElepayHelper
     }
 
     /**
-     * 現在のセッションのカートを空にする
+     * Empties the cart of the current session
      */
     public function cartClear()
     {
@@ -186,7 +186,7 @@ class ElepayHelper
     }
 
     /**
-     * 受注と同じ pre_order_id を持つカートを削除する. 既に削除済みの場合は何もしない
+     * Deletes the cart with the same pre_order_id as the order. Does nothing if it is already deleted
      *
      * @param string|null $preOrderId
      */
@@ -203,18 +203,18 @@ class ElepayHelper
     }
 
     /**
-     * 受注ステータスを、現在のステータスが $fromStatusIds のいずれかである場合に限り $toStatusId へ変更する.
+     * Changes the order status to $toStatusId, only if the current status is one of $fromStatusIds.
      *
-     * 決済の確定とキャンセルが同時に起きても一方だけが後続処理を行えるよう、条件付き UPDATE で DB 上の
-     * 状態遷移を 1 リクエストに絞る. 同じ行への後の UPDATE は先のトランザクションの終了まで行ロックで待ち、
-     * 遷移済みの行には一致しないため false になる.
-     * リクエスト全体のトランザクション内で呼ぶこと. 後続処理が失敗した場合は、この UPDATE ごとロールバックさせる必要がある.
-     * 呼び出し側のエンティティは更新しないため、エンティティのステータスは呼び出し側で合わせる
+     * A conditional UPDATE narrows the status transition in the DB down to one request, so that when a payment capture and a
+     * cancel happen at once, only one of them runs the follow-up. A later UPDATE on the same row waits on the row lock until
+     * the earlier transaction ends, then matches no row because it has already moved on, and returns false.
+     * Call it inside the request-wide transaction: if the follow-up fails, this UPDATE has to be rolled back with it.
+     * It does not update the caller's entity, so the caller has to bring the entity's status in line
      *
      * @param Order $order
      * @param int[] $fromStatusIds
      * @param int $toStatusId
-     * @return bool この呼び出しで遷移させた場合 true
+     * @return bool true if this call made the transition
      */
     public function transitionOrderStatus(Order $order, array $fromStatusIds, int $toStatusId): bool
     {
@@ -233,10 +233,10 @@ class ElepayHelper
     }
 
     /**
-     * DB 上の最新の受注ステータス ID を行ロック付きで取得する.
+     * Gets the latest order status ID in the DB, with a row lock.
      *
-     * 他のリクエストが先に遷移させた後の状態を知るためのもの. ロックなしの SELECT は MySQL の REPEATABLE READ では
-     * トランザクション開始時点のスナップショットを返すため、ロック付きで読む
+     * Used to learn the status after another request has made a transition first. Under MySQL REPEATABLE READ a SELECT
+     * without a lock returns the snapshot taken at the start of the transaction, so read with a lock
      *
      * @param Order $order
      * @return int|null
@@ -253,7 +253,7 @@ class ElepayHelper
     }
 
     /**
-     * 注文完了メールを送信する.
+     * Sends the order complete mail.
      *
      * @param Order $order
      */
@@ -262,7 +262,7 @@ class ElepayHelper
     }
 
     /**
-     * 受注を受注番号で検索する.
+     * Finds an order by its order number.
      *
      * @param String $orderNo
      *
@@ -276,7 +276,7 @@ class ElepayHelper
     }
 
     /**
-     * 購入処理中の受注ステータスを返す
+     * Returns the PROCESSING order status
      *
      * @return object|null
      */
@@ -286,7 +286,7 @@ class ElepayHelper
     }
 
     /**
-     * 決済処理中の受注ステータスを返す
+     * Returns the PENDING order status
      *
      * @return object|null
      */
@@ -296,7 +296,7 @@ class ElepayHelper
     }
 
     /**
-     * 入金済みの受注ステータスを返す
+     * Returns the PAID order status
      *
      * @return object|null
      */
@@ -319,8 +319,8 @@ class ElepayHelper
         /** @var CodeReq $codeReq */
         $codeReq = new CodeReq();
         $codeReq->setOrderNo($this->getOrderNo($order));
-        // Order の金額は DECIMAL 由来の文字列（"1000.00" 等）で返ることがあるため整数に正規化する.
-        // amount は整数しか受け付けないので、端数のある金額は切り捨てて請求せずエラーにする
+        // Order amounts can come back as strings from DECIMAL columns (e.g. "1000.00"), so normalize them to integers.
+        // amount accepts integers only, so a fractional amount is an error rather than being truncated and charged
         $paymentTotal = $order->getPaymentTotal();
         if ((int)$paymentTotal != $paymentTotal) {
             throw new \InvalidArgumentException('Payment total with a fractional part is not supported: ' . $paymentTotal);
@@ -482,7 +482,7 @@ class ElepayHelper
         return [
             'key' => $key,
             'name' => (string)($paymentMethodInfo['name']['ja'] ?? $key),
-            // 外部 JSON 由来のため、https 以外の URL（javascript: 等）は画面に出さない
+            // These come from external JSON, so never show a non-https URL (javascript: etc.)
             'image' => $this->isHttpsUrl($image) ? $image : null,
             'min' => null,
             'max' => null,
@@ -491,7 +491,7 @@ class ElepayHelper
     }
 
     /**
-     * URL が https で、ホストを持つか
+     * Whether the URL is https and has a host
      *
      * @param mixed $url
      * @return bool
@@ -508,8 +508,8 @@ class ElepayHelper
     }
 
     /**
-     * URL にクエリパラメータを追加する. 同名のパラメータは置き換え、キーと値は URL エンコードする.
-     * 既存のクエリは解析し直さずにそのまま残す
+     * Adds query parameters to a URL. A parameter with the same name is replaced; keys and values are URL-encoded.
+     * The existing query is kept as is, without re-parsing it
      *
      * @param string $url
      * @param array $params

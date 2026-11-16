@@ -8,7 +8,7 @@ namespace Plugin\elepay42\Service;
 class LoggerService
 {
     /**
-     * ログヘッダー
+     * Log header
      */
     const LOG_CHANNEL = 'elepay';
     const LOG_HEADER = '[elepay] ';

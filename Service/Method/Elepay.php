@@ -53,8 +53,8 @@ class Elepay implements PaymentMethodInterface
     /**
      * {@inheritdoc}
      *
-     * 確認画面で検証することはないため false を返す.
-     * 成功の PaymentResult を返すと、EC-CUBE 4.4 はレスポンス未設定のまま getResponse() を参照して落ちる.
+     * Returns false, since nothing is verified on the confirmation page.
+     * Returning a successful PaymentResult makes EC-CUBE 4.4 call getResponse() with no response set, and crash.
      */
     public function verify(): bool
     {
@@ -69,19 +69,19 @@ class Elepay implements PaymentMethodInterface
      */
     public function apply(): PaymentDispatcher
     {
-        // 受注ステータスを決済処理中へ変更
+        // Change the order status to PENDING
         /** @var OrderStatus $orderStatus */
         $orderStatus = $this->orderStatusRepository->find(OrderStatus::PENDING);
         $this->order->setOrderStatus($orderStatus);
 
-        // purchaseFlow::prepareを呼び出し, 購入処理を進める.
+        // Call purchaseFlow::prepare to proceed with the purchase.
         $this->purchaseFlow->prepare($this->order, new PurchaseContext());
 
-        // elepay の決済画面へ遷移する中継ページへ、同一リクエスト内で forward する.
-        // リダイレクトにすると、EC-CUBE 4.2/4.3 ではトランザクションのコミットが kernel.terminate まで遅れ、
-        // 中継ページが PENDING になる前の受注を読んでしまう.
-        // EC-CUBE 4.4 は dispatcher のレスポンスを null チェックせずに参照するため、リダイレクトでも 2xx でもない
-        // ダミーのレスポンスを設定し、全バージョンで isForward() の分岐に進ませる
+        // Forward, within the same request, to the relay page that moves on to the elepay payment page.
+        // With a redirect, EC-CUBE 4.2/4.3 delay the transaction commit until kernel.terminate,
+        // and the relay page would read the order before it becomes PENDING.
+        // EC-CUBE 4.4 reads the dispatcher's response without a null check, so set a dummy response that is neither a redirect
+        // nor 2xx, which sends every version down the isForward() branch
         $dispatcher = new PaymentDispatcher();
         $dispatcher->setResponse(new Response('', Response::HTTP_CONTINUE));
         $dispatcher->setForward(true);
@@ -93,8 +93,8 @@ class Elepay implements PaymentMethodInterface
     /**
      * {@inheritdoc}
      *
-     * apply() が forward して購入フローを抜けるため、ここへは到達しない.
-     * 万一到達した場合に未決済の受注が完了扱いにならないよう、失敗を返す.
+     * Never reached, since apply() forwards out of the purchase flow.
+     * Returns a failure so that, should it ever be reached, an unpaid order is not treated as complete.
      */
     public function checkout(): PaymentResult
     {
