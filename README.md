@@ -41,3 +41,7 @@ It resolves the dependencies against PHP 7.4 regardless of the local PHP, append
 - `composer.json` Package management
 - `Event.php` Use the template render event to do the corresponding processing
 - `PluginManager.php` Main
+
+## License
+
+This plugin is released under the [MIT License](LICENSE). Third-party libraries bundled under `Resource/vendor/` keep their own licenses.

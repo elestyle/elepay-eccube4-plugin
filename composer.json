@@ -3,6 +3,7 @@
   "version": "1.4.3",
   "description": "elepay決済プラグイン(4.2/4.3/4.4系)",
   "type": "eccube-plugin",
+  "license": "MIT",
   "require": {
     "ec-cube/plugin-installer": "~0.0.7 || ^2.0"
   },
